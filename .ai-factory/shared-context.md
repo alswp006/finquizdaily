@@ -16,8 +16,9 @@
 /** 일일 퀴즈의 기본 엔티티. questions.json 로더와 화면 렌더링에서 모두 필요 (구현: 패킷 heal-2-02) */
 export type Quiz = { id: string; question: string; options: string[]; correctAnswer: number; category: string; difficulty: 'easy' | 'medium' | 'hard'; explanations: { [key: number]: string } };
 
-/** 사용자의 일일 퀴즈 진행 상태. 저장/로드 및 화면 렌더링에서 공유 (구현: 패킷 heal-1-01) */
-export type QuizState = { userId?: string; date: string; currentQuizId: string; selectedAnswer?: number; isAnswered: boolean; isCorrect?: boolean; completedAt?: string };
+/** 사용자의 일일 퀴즈 진행 상태(단건 제출 상태). 저장/로드 및 화면 렌더링에서 공유 (구현: 패킷 heal-1-01)
+ * 이름 충돌 주의: src/lib/types.ts의 QuizState(집계 저장 상태)와는 다른 타입이다 — import 시 어느 쪽인지 명확히 구분할 것. */
+export type QuizAnswerState = { userId?: string; date: string; currentQuizId: string; selectedAnswer?: number; isAnswered: boolean; isCorrect?: boolean; completedAt?: string };
 
 /** 완료된 퀴즈 결과. 결과 페이지와 랭킹 페이지에서 사용 (구현: 패킷 heal-1-01) */
 export type QuizResult = { quizId: string; date: string; selectedAnswer: number; correctAnswer: number; isCorrect: boolean; category: string; difficulty: string; completedAt: string };
@@ -26,16 +27,16 @@ export type QuizResult = { quizId: string; date: string; selectedAnswer: number;
 export type loadDailyQuizFn = (date?: string) => Promise<Quiz>;
 
 /** 사용자의 일일 퀴즈 진행 상태를 저장소에서 로드 (구현: 패킷 heal-1-01) */
-export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizState | null>;
+export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizAnswerState | null>;
 
 /** 사용자의 퀴즈 상태를 저장소에 저장 (구현: 패킷 heal-1-01) */
-export type saveUserQuizStateFn = (userId: string, state: QuizState) => Promise<void>;
+export type saveUserQuizStateFn = (userId: string, state: QuizAnswerState) => Promise<void>;
 
 /** 사용자의 완료된 퀴즈 히스토리 조회. ResultPage, WrongNotePage, RankingPage에서 사용 (구현: 패킷 heal-1-01) */
 export type getUserQuizHistoryFn = (userId: string, limit?: number) => Promise<QuizResult[]>;
 
 /** 퀴즈 로드, 상태 관리, 제출 로직을 통합한 커스텀 훅. heal-1-02의 모든 페이지에서 호출 (구현: 패킷 heal-2-02) */
-export type useDailyQuizFn = (date?: string) => { quiz: Quiz | null; state: QuizState | null; isLoading: boolean; error: Error | null; submitAnswer: (answer: number) => Promise<void> };
+export type useDailyQuizFn = (date?: string) => { quiz: Quiz | null; state: QuizAnswerState | null; isLoading: boolean; error: Error | null; submitAnswer: (answer: number) => Promise<void> };
 
 /** 날짜를 UI 표시용 문자열로 포맷. 화면 렌더링에서 사용 (구현: 패킷 heal-2-01) */
 export type formatDateFn = (date: string | Date) => string;
@@ -108,8 +109,11 @@ export interface QuizState {
     EmptyState.tsx
   data/
     questions.json
+  hooks/
+    useDailyQuiz.ts
   lib/
     __tests__/
+    contract.ts
     quizState.ts
     storage.ts
     types.ts
@@ -119,9 +123,11 @@ export interface QuizState {
     ResultPage.tsx
     WrongNotePage.tsx
     __tests__/
+  types/
 
 ### Exports (src/lib/)
-- quizState.ts: export function loadQuizState(): Required<QuizState>; export function loadQuestions(): Question[]
+- contract.ts: export type Quiz =; export type QuizAnswerState =; export type QuizResult =; export type loadDailyQuizFn = (date?: string) => Promise<Quiz>; export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizAnswerState | null>; export type saveUserQuizStateFn = (userId: string, state: QuizAnswerState) => Promise<void>; export type getUserQuizHistoryFn = (userId: string, limit?: number) => Promise<QuizResult[]>; export type useDailyQuizFn = (date?: string) =>
+- quizState.ts: export function loadQuizState(): Required<QuizState>; export function loadQuestions(): Question[]; export function getDailyQuestions(questions: Question[], date: string = new Date().toISOString().slice(0, 10)): Question; export function isQuizAvailable(date: string): boolean; export function calculateAccuracy(results: QuizResult[]): number
 - storage.ts: export const DEFAULT_QUIZ_STATE: QuizState =; export const DEFAULT_QUESTIONS: Question[] = questionsData as Question[]; export function getItem<T>(key: string, defaultValue: T): Required<T>; export function setItem<T>(key: string, value: T): void; export function removeItem(key: string): void
 - types.ts: export interface QuestionOption; export interface Question; export interface DailyProgress; export interface WrongAnswer; export interface WeeklyRecord; export interface QuizState
 
@@ -129,7 +135,7 @@ export interface QuizState {
 - EmptyState.tsx: EmptyState
 
 ### Module Dependencies (import graph)
-  lib/quizState.ts → imports: lib/types, lib/storage
+  lib/quizState.ts → imports: lib/types, lib/contract, lib/storage
   lib/storage.ts → imports: lib/types, data/questions.json
   pages/QuizPage.tsx → imports: lib/quizState, lib/storage, components/EmptyState, lib/types
   pages/RankingPage.tsx → imports: components/EmptyState, lib/quizState, lib/types
@@ -141,43 +147,4 @@ CRITICAL: Before creating any new function, type, or component, check the list a
 - heal-1-01: 스토리지/데이터 로더 방어적 정규화 (files: src/lib/storage.ts, src/lib/quizState.ts, src/data/questions.json)
 - heal-1-02: 화면 렌더 경로 옵셔널 가드 추가 (files: src/pages/QuizPage.tsx, src/pages/ResultPage.tsx, src/pages/WrongNotePage.tsx, src/pages/RankingPage.tsx, src/components/EmptyState.tsx)
 - heal-1-03: 에러 경로 회귀 테스트 및 빌드 검증 (files: src/lib/__tests__/storage.test.ts, src/pages/__tests__/screens.smoke.test.tsx, vite.config.ts)
-
-## Available exports from existing files
-// src/components/EmptyState.tsx
-export default function EmptyState({
-
-// src/lib/contract.ts
-export type Quiz = { id: string; question: string; options: string[]; correctAnswer: number; category: string; difficulty: 'easy' | 'medium' | 'hard'; explanations: { [key: number]: string } };
-export type QuizState = { userId?: string; date: string; currentQuizId: string; selectedAnswer?: number; isAnswered: boolean; isCorrect?: boolean; completedAt?: string };
-export type QuizResult = { quizId: string; date: string; selectedAnswer: number; correctAnswer: number; isCorrect: boolean; category: string; difficulty: string; completedAt: string };
-export type loadDailyQuizFn = (date?: string) => Promise<Quiz>;
-export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizState | null>;
-export type saveUserQuizStateFn = (userId: string, state: QuizState) => Promise<void>;
-export type getUserQuizHistoryFn = (userId: string, limit?: number) => Promise<QuizResult[]>;
-export type useDailyQuizFn = (date?: string) => { quiz: Quiz | null; state: QuizState | null; isLoading: boolean; error: Error | null; submitAnswer: (answer: number) => Promise<void> };
-export type formatDateFn = (date: string | Date) => string;
-export type getTodayDateStringFn = () => string;
-
-// src/lib/quizState.ts
-export { DEFAULT_QUIZ_STATE, DEFAULT_QUESTIONS };
-export function loadQuizState(): Required<QuizState> {
-export function loadQuestions(): Question[] {
-
-// src/lib/types.ts
-export interface QuestionOption {
-export interface Question {
-export interface DailyProgress {
-export interface WrongAnswer {
-export interface WeeklyRecord {
-export interface QuizState {
-
-## Memory Index (자동 학습 — 힌트로만 사용, 실제 코드 확인 필수)
-
-Available topics: general(8)
-
-Key lessons (verify against actual code before applying):
-- [general] 의존 그래프 최하층의 타입·계약 파일은 런타임 코드 0줄의 순수 선언으로 가장 먼저 단독 타입체크를 통과시키고, 파일 생성은 셸 명령이 아닌 허용된 편집 도구로만 하게 강제하라. (60% · 타 앱 1회 — 맹신 금지)
-- [general] 영속 저장소에서 읽은 값은 항상 스키마 기본값으로 정규화해 배열·객체 타입을 보장한 뒤 반환하고, 화면은 빈/손상/부분 데이터에서도 렌더되도록 방어하라. (60% · 타 앱 1회 — 맹신 금지)
-- [general] 정책·기능 제거형 리팩터링은 화면과 도메인 로직 레이어에서만 수행하고, package.json의 플랫폼 필수 의존성(디자인 시스템·플랫폼 SDK·프레임워크 코어)은 어떤 경우에도 삭제하지 말 것 — 필수 패키지 화이트리스트를 빌드 전 가드로 검증하라. (60% · 타 앱 1회 — 맹신 금지)
-- [general] 공용 기반 모듈(상수·저장소·계산 유틸)이 실제로 머지되기 전에는 이를 import하는 화면·훅 패킷을 머지하지 말고, 모든 머지 게이트에 타입체크와 프로덕션 빌드 통과(미해결 import 0건)를 필수로 걸어라. (60% · 타 앱 1회 — 맹신 금지)
-- [general] 라우팅·Provider·전역 레이아웃 같은 단일 통합 배선 책임은 하나의 워크패킷에만 할당하고, 다른 패킷은 그 위에 페이지 내부 요소만 얹도록 경계를 명확히 나눠라. (60% · 타 앱 1회 — 맹신 금지)
+- heal-2-02: 데이터 계약 확정 및 로더 방어적 정규화 재정비 (files: src/lib/storage.ts, src/types/quiz.ts, src/data/questions.json, src/hooks/useDailyQuiz.ts)
