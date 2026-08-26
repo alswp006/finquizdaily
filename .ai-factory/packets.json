@@ -1,0 +1,748 @@
+[
+  {
+    "id": "0001",
+    "title": "도메인 타입 + RouteState 정의",
+    "epic": "Epic 1. 타입/데이터 모델",
+    "task": {
+      "description": "FinQuizDaily 전 기능이 공유하는 순수 타입을 src/lib/types.ts 한 곳에 정의한다. Question, Note, DailySession, Profile, Badge, Flags, DeepExplainState, RankCache, RankEntry, Result<T>와 라우트별 location.state 계약인 RouteState를 export type/interface로만 선언한다. 함수·상수 값 등 런타임 코드는 단 한 줄도 넣지 않는다.",
+      "acceptance_criteria": [
+        "npx tsc --noEmit 통과하고 파일 내 function/const 값 선언 0건",
+        "RouteState에 '/', '/daily', '/daily/result', '/notes', '/notes/:questionId', '/rank', '/share' 키가 모두 존재하고 /daily/result·/share는 { dateKey: string } | undefined 유니온",
+        "Result<T> = { ok: true; value: T } | { ok: false; error: AppError } 형태로 선언"
+      ]
+    },
+    "covers": [
+      "F6-공통",
+      "F7-공통",
+      "F8-공통",
+      "F9-공통"
+    ],
+    "files": [
+      "src/lib/types.ts"
+    ],
+    "definition_of_done": [
+      "Question: id, category, text, choices: string[], answerIndex: number, explanation, deepExplanation 포함",
+      "Note: questionId, status: 'todo'|'done', reviewedAt: number|null, createdAt: number 포함",
+      "DailySession: dateKey, answers: number[], score: number, status: 'in_progress'|'completed' 포함",
+      "Profile: userKey, nickname, totalScore, streak, lastCompletedDateKey: string|null, badges: Badge[], noteDoneCount 포함",
+      "Badge 유니온에 'note_master' 포함, Flags에 rankOptIn/rankDisabledReason/lastShareAt/deepExplainUnlockedDateKey 포함"
+    ],
+    "depends_on": [],
+    "db_schema": "interface Note { questionId: string; status: 'todo'|'done'; reviewedAt: number|null; createdAt: number } → localStorage key: 'fqd:v1:notes' / DailySession → 'fqd:v1:sessions' / Profile → 'fqd:v1:profile' / Flags → 'fqd:v1:flags' / RankCache → 'fqd:v1:rankCache'",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0002",
+    "title": "Error Catalog + AppError 타입",
+    "epic": "Epic 1. 타입/데이터 모델",
+    "task": {
+      "description": "SPEC F9에 등장하는 모든 에러 코드를 단일 소스로 격리한다. ERROR_CATALOG를 as const 객체로 선언해 code → { httpStatus, userMessage } 매핑을 제공하고, AppError 타입을 export한다. userMessage는 화면에 그대로 노출되는 문자열이므로 SPEC 표기와 문자 단위로 동일해야 한다.",
+      "acceptance_criteria": [
+        "ERROR_CATALOG 키 개수가 정확히 15개이고 as const로 선언됨",
+        "'서버에 문제가 생겼어요. 잠시 후 다시 시도해주세요', '요청이 많아요. 잠시 후 다시 시도해주세요', '인터넷 연결을 확인해주세요', '랭킹 서버 점검 중이에요', '입력값을 다시 확인해주세요' 문자열이 문자 단위로 일치",
+        "tsc --noEmit 통과, 네트워크/스토리지 접근 0건"
+      ]
+    },
+    "covers": [
+      "F9-AC-1",
+      "F9-AC-8"
+    ],
+    "files": [
+      "src/lib/errorCatalog.ts"
+    ],
+    "definition_of_done": [
+      "포함 코드: E_VALIDATION(400), E_TYPE_MISMATCH(400), E_UNAUTHENTICATED(401), E_FORBIDDEN(403), E_NOT_FOUND(404), E_TIMEOUT(408), E_CONFLICT_DUPLICATE(409), E_CONFLICT_STATE(409), E_LIMIT_EXCEEDED(400), E_SCHEMA_INVALID(422), E_RATE_LIMITED(429), E_SERVER(500), E_UNAVAILABLE(503), E_OFFLINE(0), E_CLIPBOARD_FAILED(0)",
+      "AppError = { code: ErrorCode; httpStatus: number; userMessage: string; field?: string; context?: string }",
+      "ErrorCode 타입이 ERROR_CATALOG의 keyof로 파생되어 오타가 컴파일 타임에 잡힘"
+    ],
+    "depends_on": [],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0003",
+    "title": "문항 은행 시드 데이터 + getQuestion 조회",
+    "epic": "Epic 1. 타입/데이터 모델",
+    "task": {
+      "description": "금융 상식 문항 30개 이상을 QUESTION_BANK로 정의한다. 모든 id는 /^q-\\d{3}$/ 형식이며 중복이 없다. 각 문항은 4지선다, 20자 이상 기본 해설, 60자 이상 심화 해설을 갖는다. 은행에 없는 id 조회 시 throw 없이 null을 반환하는 getQuestion만 함께 제공한다.",
+      "acceptance_criteria": [
+        "QUESTION_BANK.length >= 30 이고 new Set(ids).size === ids.length",
+        "전 문항이 choices.length === 4, 0 <= answerIndex <= 3, explanation.length >= 20, deepExplanation.length >= 60 을 만족",
+        "getQuestion('q-999')가 예외 없이 null 반환"
+      ]
+    },
+    "covers": [
+      "F6-AC-6",
+      "F6-AC-9",
+      "F1-문항소스"
+    ],
+    "files": [
+      "src/data/questionBank.ts"
+    ],
+    "definition_of_done": [
+      "category가 사전 정의된 리터럴 유니온('예금','투자','세금','대출','보험' 등)에 속함",
+      "네트워크/localStorage 접근 0건, 순수 데이터 + 조회 함수만 존재",
+      "tsc --noEmit 통과"
+    ],
+    "depends_on": [
+      "0001"
+    ],
+    "db_schema": "const QUESTION_BANK: readonly Question[] (정적 데이터, localStorage 사용 안 함)",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0004",
+    "title": "fqd:v1 localStorage 네임스페이스 헬퍼 + 자가복구",
+    "epic": "Epic 1. 타입/데이터 모델",
+    "task": {
+      "description": "fqd:v1:* 키 전용 안전 read/write 유틸을 만든다. JSON 파싱 실패나 타입 불일치 시 해당 키만 기본값으로 재초기화하고 다른 키는 절대 건드리지 않는다. 저장 실패(QuotaExceededError)는 throw하지 않고 false를 반환해 호출부가 Toast로 처리할 수 있게 한다.",
+      "acceptance_criteria": [
+        "readArray('fqd:v1:notes', []) 호출 시 저장값이 '{\"a\":1}'이면 해당 키를 '[]'로 덮어쓰고 [] 반환 + console.warn 정확히 1건",
+        "위 복구 후 fqd:v1:sessions와 fqd:v1:profile 값이 그대로 남아 있음(단위 테스트로 확인)",
+        "write()가 QuotaExceededError 발생 시 예외를 던지지 않고 false 반환"
+      ]
+    },
+    "covers": [
+      "F6-AC-12"
+    ],
+    "files": [
+      "src/lib/storage.ts"
+    ],
+    "definition_of_done": [
+      "KEYS = { notes: 'fqd:v1:notes', sessions: 'fqd:v1:sessions', profile: 'fqd:v1:profile', flags: 'fqd:v1:flags', rankCache: 'fqd:v1:rankCache' } export",
+      "readArray<T>, readObject<T>, write, remove 4개 함수 export",
+      "localStorage 미지원 환경(try/catch)에서도 앱이 크래시하지 않고 fallback 반환"
+    ],
+    "depends_on": [
+      "0001"
+    ],
+    "db_schema": "KEYS 네임스페이스: fqd:v1:notes(배열), fqd:v1:sessions(배열), fqd:v1:profile(객체), fqd:v1:flags(객체), fqd:v1:rankCache(객체)",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0005",
+    "title": "런타임 스키마 가드 parseX (throw 0건)",
+    "epic": "Epic 1. 타입/데이터 모델",
+    "task": {
+      "description": "예외를 던지지 않고 Result<T>를 반환하는 화이트리스트 파서를 구현한다. parseSession, parseNote, parseProfile, parseRankEntry, parseLeaderboardResponse 5개를 제공하며 필수 키 누락은 E_VALIDATION(400), 타입 불일치는 E_TYPE_MISMATCH(400), 범위/구조 위반은 E_SCHEMA_INVALID(422)로 분류한다.",
+      "acceptance_criteria": [
+        "세 실패 케이스 모두에서 throw 0건, 항상 { ok:false, error } 반환",
+        "성공 시 반환 객체에 스키마 외 키가 존재하지 않음(Object.keys 비교 테스트 통과)",
+        "parseSession: answers가 배열이 아니거나 원소가 정수 아님/-1 미만/3 초과면 E_SCHEMA_INVALID(422)",
+        "parseProfile: streak 음수 또는 badges 비배열이면 E_SCHEMA_INVALID(422), 성공 시 badges는 알려진 리터럴만 남기고 필터링",
+        "parseLeaderboardResponse: entries 비배열이면 422 실패, 배열이면 항목 단위 필터링 후 { entries, droppedCount } 반환"
+      ]
+    },
+    "covers": [
+      "F9-AC-4",
+      "F7-AC-20",
+      "F6-AC-12"
+    ],
+    "files": [
+      "src/lib/schema.ts"
+    ],
+    "definition_of_done": [
+      "모든 파서가 순수 함수(스토리지·네트워크 접근 0건)",
+      "AppError 생성 시 userMessage는 ERROR_CATALOG에서만 가져옴",
+      "tsc --noEmit 통과"
+    ],
+    "depends_on": [
+      "0001",
+      "0002"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0006",
+    "title": "mapHttpError + logAppError + apiFetch(타임아웃·재시도)",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "HTTP status를 AppError로 매핑하는 순수 함수와 고정 포맷 로거를 만들고, 그 위에 AbortController 기반 5000ms 타임아웃과 상태코드별 재시도 정책을 가진 apiFetch 래퍼를 구현한다. 재시도 판단은 오직 apiFetch 한 곳에만 존재해야 하며 반환 타입은 Result<T>로 통일한다.",
+      "acceptance_criteria": [
+        "400/401/403/404/409/413/415는 총 1회 요청, 408/429/500/502/503/504 및 TypeError: Failed to fetch는 총 2회 요청",
+        "재시도 간격 1000ms, 429는 Retry-After 헤더 우선이며 헤더 없음/60 초과 시 60000ms로 캡",
+        "미매핑 status(418)는 E_SERVER/httpStatus 500으로 매핑되고 undefined 반환 0건",
+        "logAppError(err, ctx)가 console.warn('[FQD] {code} {httpStatus} {context}') 단일 문자열로 1회 호출되며 서버 body.message·userKey·닉네임 미포함",
+        "타임아웃 후 늦게 도착한 응답이 Result를 덮어쓰지 않음(abort 이후 resolve 무시)"
+      ]
+    },
+    "covers": [
+      "F9-AC-1",
+      "F9-AC-3",
+      "F9-AC-9",
+      "F7-AC-16",
+      "F7-AC-17"
+    ],
+    "files": [
+      "src/lib/errors.ts",
+      "src/lib/apiFetch.ts"
+    ],
+    "definition_of_done": [
+      "mapHttpError 반환 userMessage가 ERROR_CATALOG[code].userMessage와 === 로 일치(전 코드 순회 테스트)",
+      "서버 body.message가 AppError.userMessage에 절대 대입되지 않음",
+      "apiFetch는 총 소요 시간이 12000ms를 넘지 않도록 재시도 1회로 제한"
+    ],
+    "depends_on": [
+      "0002"
+    ],
+    "db_schema": "",
+    "api_contract": "내부 래퍼: apiFetch<T>(url, init) → Result<T> | AppError(E_TIMEOUT 408 / E_OFFLINE 0 / E_SERVER 500 등)",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0007",
+    "title": "KST 날짜키·주차키 + 점수 클램프 유틸",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "KST(UTC+9) 기준 dateKey(YYYY-MM-DD)와 ISO 주차 기반 weekKey(2026-W35) 생성 함수, 주간 점수 합산과 클램프 유틸을 순수 함수로 구현한다. 클램프는 상한 553, 하한 0으로 고정하며 클램프가 실제로 발생한 경우에만 경고 로그를 1건 남긴다.",
+      "acceptance_criteria": [
+        "getDateKey(new Date('2026-08-25T15:30:00Z'))가 KST 기준 '2026-08-26' 반환",
+        "getWeekKey가 월요일 시작 기준으로 '2026-W35' 포맷을 반환하고 연말/연초 경계에서도 W01~W53 범위 유지",
+        "clampScore(554)===553이고 console.warn('[FQD] E_LIMIT_EXCEEDED score') 정확히 1건, clampScore(-1)===0, clampScore(137)===137이며 이때 warn 0건"
+      ]
+    },
+    "covers": [
+      "F7-AC-1",
+      "F7-AC-6",
+      "F7-AC-7"
+    ],
+    "files": [
+      "src/lib/datetime.ts",
+      "src/lib/score.ts"
+    ],
+    "definition_of_done": [
+      "모든 함수가 Date 주입 가능한 시그니처(기본값 new Date())로 테스트 가능",
+      "스토리지/네트워크 접근 0건, 하드코딩된 타임존 오프셋은 상수 1곳에만 존재",
+      "tsc --noEmit 통과"
+    ],
+    "depends_on": [],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0008",
+    "title": "랭킹 API 클라이언트 submitScore / fetchLeaderboard",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "apiFetch 위에 랭킹 전용 클라이언트를 구현한다. submitScore는 전송 전 사전 검증과 점수 클램프를 수행하고, fetchLeaderboard는 응답을 스키마 파서로 통과시킨 뒤 RankCache에 저장한다. 상태코드별 후처리(409 정상 갱신, 401/403 옵트인 비활성화, 404 빈 상태)를 이 레이어에서 확정한다.",
+      "acceptance_criteria": [
+        "score가 문자열 '137'이면 네트워크 요청 0회로 AppError { code:'E_TYPE_MISMATCH', httpStatus:400, field:'score' } 반환",
+        "200 { rank:12, total:340 } 수신 시 RankCache.me.rank=12, stale=false로 저장",
+        "409 DUPLICATE_SUBMISSION은 rank/total로 캐시 갱신 + console.warn('[FQD] E_CONFLICT_DUPLICATE scores') 1건, 에러 UI 신호 없음",
+        "409 SCORE_REGRESSION은 서버 storedScore/rank를 채택해 캐시 저장하고 Profile.totalScore는 변경하지 않음",
+        "401은 Flags.rankOptIn=false, rankDisabledReason='unauthenticated'로 저장하고 이후 자동 재제출 0회; 403은 rankDisabledReason='forbidden' 저장"
+      ]
+    },
+    "covers": [
+      "F7-AC-1",
+      "F7-AC-7",
+      "F7-AC-9",
+      "F7-AC-10",
+      "F7-AC-11",
+      "F7-AC-12",
+      "F7-AC-13",
+      "F7-AC-14",
+      "F7-AC-15",
+      "F7-AC-18"
+    ],
+    "files": [
+      "src/lib/rankApi.ts",
+      "src/lib/rankCache.ts"
+    ],
+    "definition_of_done": [
+      "rankOptIn===false이면 submitScore/fetchLeaderboard 모두 네트워크 호출 0회로 즉시 반환",
+      "503 2회 실패 시 rankDisabledReason='unavailable' 저장 + 세션 내 자동 재조회 0회",
+      "모든 요청에 X-User-Key: profile.userKey 헤더 포함, 400 계열은 재시도 0회",
+      "RankCache.weekKey가 현재 weekKey와 다르면 캐시를 렌더 대상에서 제외"
+    ],
+    "depends_on": [
+      "0004",
+      "0005",
+      "0006",
+      "0007"
+    ],
+    "db_schema": "RankCache { weekKey: string; stale: boolean; entries: RankEntry[]; me: { rank; total; score } | null } → localStorage key: 'fqd:v1:rankCache'",
+    "api_contract": "POST /v1/scores {userKey, nickname, weekKey, score, streak} + header X-User-Key → 200 {rank,total} | 400 INVALID_PAYLOAD/INVALID_TYPE | 401 UNAUTHORIZED | 403 FORBIDDEN | 409 DUPLICATE_SUBMISSION|SCORE_REGRESSION | 429 RATE_LIMITED | 500/503 || GET /v1/leaderboard?weekKey= → 200 {entries[],me} | 404 WEEK_NOT_FOUND | 500 INTERNAL_ERROR | 503 SERVICE_UNAVAILABLE",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0009",
+    "title": "오답노트 도메인 스토어 + 오답 자동 적재",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "노트 목록 로드 시 손상/고아 행을 정제하고, 복습 완료 처리와 note_master 뱃지 카운트를 담당하는 도메인 스토어를 만든다. 함께 데일리 오답을 노트로 적재하는 함수도 제공하되 동일 questionId 재적재 시 중복 행을 만들지 않는다.",
+      "acceptance_criteria": [
+        "loadNotes()가 문제 은행에 없는 questionId 행을 결과에서 제외하고 fqd:v1:notes에서도 제거하며 { notes, removedCount } 반환, console.error 0건",
+        "reviewNote(id, isCorrect): 이미 status==='done'인 노트는 reviewedAt 미갱신 + noteDoneCount 미증가 + { duplicated: true } 반환(E_CONFLICT_DUPLICATE 무음)",
+        "addWrongAnswers(questionIds): 이미 존재하는 questionId는 건너뛰어 notes 길이가 증가하지 않고 createdAt은 최초 값 유지",
+        "noteDoneCount가 20에 도달하는 순간에만 { badgeUnlocked: 'note_master' }를 1회 반환하고 21번째부터는 false"
+      ]
+    },
+    "covers": [
+      "F6-AC-1",
+      "F6-AC-2",
+      "F6-AC-6",
+      "F6-AC-8",
+      "F6-AC-11"
+    ],
+    "files": [
+      "src/lib/notesStore.ts",
+      "src/lib/notesIntake.ts"
+    ],
+    "definition_of_done": [
+      "정제 결과 removedCount가 N이어도 호출부가 Toast를 1회만 띄울 수 있도록 집계값만 반환(내부에서 UI 호출 0건)",
+      "questionId 검증에 /^q-\\d{3}$/ 사용, 검증 실패 행은 조회 시도 없이 제거",
+      "tsc --noEmit 통과 및 단위 테스트로 잔존 키(sessions/profile) 확인"
+    ],
+    "depends_on": [
+      "0003",
+      "0004",
+      "0005"
+    ],
+    "db_schema": "Note[] → localStorage key: 'fqd:v1:notes'; Profile.noteDoneCount/badges → 'fqd:v1:profile'",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0010",
+    "title": "일일 3문항 결정론적 선택기 + 데일리 세션 스토어",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "dateKey를 시드로 문제 은행에서 매일 동일한 3문항을 뽑는 결정론적 선택기와, 진행 중/완료 세션을 저장·조회하는 스토어를 구현한다. 같은 날 새로고침해도 동일 문항과 동일 진행 상태가 복원되어야 하며 세션 값은 스키마 파서를 통과한 것만 사용한다.",
+      "acceptance_criteria": [
+        "pickDaily('2026-08-26')를 10회 호출해도 항상 같은 3개 questionId를 같은 순서로 반환하고 중복 0건",
+        "날짜가 다르면 선택 결과가 달라짐(연속 7일 중 최소 5일이 서로 다른 조합)",
+        "saveAnswer(dateKey, index, choice) 후 새로고침 시 getSession(dateKey).answers가 그대로 복원됨",
+        "손상된 세션(answers에 4 포함)은 parseSession 실패로 폐기되고 새 in_progress 세션이 생성되며 console.warn 1건"
+      ]
+    },
+    "covers": [
+      "F1-AC-1",
+      "F1-AC-2",
+      "F2-AC-1",
+      "F6-AC-1"
+    ],
+    "files": [
+      "src/lib/dailySelect.ts",
+      "src/lib/dailySession.ts"
+    ],
+    "definition_of_done": [
+      "Math.random 사용 0건(문자열 해시 기반 시드만 사용)",
+      "세션 status 전이는 'in_progress' → 'completed' 단방향이며 completed 세션에 saveAnswer 호출 시 무시 + { code:'E_CONFLICT_STATE' } 반환",
+      "tsc --noEmit 통과"
+    ],
+    "depends_on": [
+      "0003",
+      "0004",
+      "0007"
+    ],
+    "db_schema": "DailySession { dateKey; answers: number[]; score: number; status } → localStorage key: 'fqd:v1:sessions' (배열, dateKey 유니크)",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0011",
+    "title": "스트릭·점수·뱃지 해금 + Flags 스토어",
+    "epic": "Epic 2. 로직/API 레이어",
+    "task": {
+      "description": "데일리 완료 시 점수 합산, 연속 학습 스트릭 갱신, 뱃지 해금 판정을 수행하는 progress 모듈과 rankOptIn·rankDisabledReason·lastShareAt·deepExplainUnlockedDateKey를 다루는 flags 모듈을 만든다. 스트릭은 어제 완료면 +1, 그 이전이면 1로 리셋하며 같은 날 재완료 시 증가하지 않는다.",
+      "acceptance_criteria": [
+        "lastCompletedDateKey가 어제면 streak+1, 이틀 이상 전이면 streak=1, 오늘과 같으면 streak 변화 0",
+        "같은 dateKey로 completeProgress를 2회 호출해도 totalScore가 2번 더해지지 않음(멱등)",
+        "getWeeklyScore(weekKey)가 해당 주 completed 세션 점수 합을 반환하고 clampScore를 거쳐 0~553 범위 유지",
+        "setDeepExplainUnlocked(dateKey) 후 isDeepExplainUnlocked(dateKey)===true, 다른 dateKey는 false"
+      ]
+    },
+    "covers": [
+      "F2-AC-1",
+      "F2-AC-2",
+      "F5-AC-1",
+      "F7-AC-5",
+      "F7-AC-7"
+    ],
+    "files": [
+      "src/lib/progress.ts",
+      "src/lib/flags.ts"
+    ],
+    "definition_of_done": [
+      "Profile 기본값 생성 시 userKey는 crypto.randomUUID 기반 1회 생성 후 재사용(재생성 0건)",
+      "뱃지 해금은 새로 해금된 것만 배열로 반환하고 이미 보유한 뱃지는 반환하지 않음",
+      "Flags 기본값: rankOptIn=false, rankDisabledReason=null, lastShareAt=null, deepExplainUnlockedDateKey=null",
+      "tsc --noEmit 통과"
+    ],
+    "depends_on": [
+      "0004",
+      "0007"
+    ],
+    "db_schema": "Profile { userKey; nickname; totalScore; streak; lastCompletedDateKey; badges: Badge[]; noteDoneCount } → 'fqd:v1:profile' / Flags → 'fqd:v1:flags'",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": ""
+  },
+  {
+    "id": "0012",
+    "title": "홈 화면 `/` (오늘의 퀴즈 진입)",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "탭 루트인 홈 화면을 만든다. 오늘 진행 상태(미시작/진행중/완료)에 따라 CTA 문구와 이동 경로가 바뀌며, 스트릭과 누적 점수를 상단 히어로에 노출한다. 오답노트·랭킹 바로가기 ListRow와 하단 배너 광고를 배치하고 FloatingTabBar로 탭 루트를 구성한다.",
+      "acceptance_criteria": [
+        "오늘 세션이 없으면 CTA가 '오늘의 퀴즈 풀기', 진행중이면 '이어서 풀기', 완료면 '결과 다시 보기'로 표시되고 각각 /daily, /daily, /daily/result로 이동",
+        "스트릭 0일 때 Chip이 '오늘 시작해요', 1 이상일 때 'N일 연속'으로 표시",
+        "CTA 탭 시 generateHapticFeedback({ type: 'success' }) 호출 1회",
+        "AdSlot 배너가 콘텐츠 하단에 렌더되고 FloatingTabBar와 겹치지 않음"
+      ]
+    },
+    "covers": [
+      "F1-AC-1",
+      "F2-AC-2"
+    ],
+    "files": [
+      "src/pages/Home.tsx"
+    ],
+    "definition_of_done": [
+      "모든 UI가 @toss/tds-mobile 컴포넌트로 구성되고 여백은 Spacing(size 필수)만 사용",
+      "HEX 색상 하드코딩 0건, 고정 px width 0건",
+      "navigate 호출 시 RouteState 타입 사용",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0010",
+      "0011"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: PageShell(탭 루트). TDS whitelist: Top, SummaryHero, Amount, Chip, ListRow, Button, Spacing, Border, Paragraph, FloatingTabBar, AdSlot(템플릿).\nLayout:\n<Top title={<Top.TitleParagraph>FinQuizDaily</Top.TitleParagraph>} />\n<SummaryHero label=\"오늘의 금융 퀴즈\" value={<Amount value={todayScore} unit=\"점\" typography=\"t1\" />} caption={`누적 ${totalScore}점`} />\n<Spacing size={12} /> <Chip label={streak>0?`${streak}일 연속`:'오늘 시작해요'} variant=\"filled\" />\n<Spacing size={16} /> <Button variant=\"fill\" color=\"primary\" size=\"large\" onClick={goDaily}>{ctaLabel}</Button>\n<Spacing size={24} /> <Border />\n<ListRow contents={<ListRow.Texts type=\"2RowTypeA\" top=\"오답노트\" bottom={`복습 대기 ${todoCount}개`} />} right={<ListRow.Right.Arrow />} onClick={()=>navigate('/notes')} />\n<ListRow contents={<ListRow.Texts type=\"2RowTypeA\" top=\"주간 랭킹\" bottom=\"이번 주 내 순위 보기\" />} right={<ListRow.Right.Arrow />} onClick={()=>navigate('/rank')} />\n<Spacing size={24} /> <AdSlot adGroupId={import.meta.env.VITE_TOSS_AD_GROUP_ID} /> <Spacing size={24} /> <FloatingTabBar />\nStates — Loading: 로컬 조회이므로 동기 렌더(스켈레톤 없음). Empty: 첫 진입(세션·프로필 없음)이면 누적 0점 + CTA '오늘의 퀴즈 풀기'. Error: 스토리지 손상 시 기본값 렌더 + console.warn 1건, 에러 화면 없음.\nInteractions: CTA 탭 → haptic success, ListRow 탭 → haptic tickWeak. 하단 fixed 요소는 paddingBottom: 'calc(16px + env(safe-area-inset-bottom))'."
+  },
+  {
+    "id": "0013",
+    "title": "데일리 퀴즈 화면 `/daily`",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "오늘의 3문항을 순서대로 푸는 화면을 만든다. 진행도(1/3)를 상단에 표시하고 선택지는 Button 스택으로 렌더하며 선택 즉시 정답/오답 색상과 해설을 노출한다. 마지막 문항 제출 후 /daily/result로 replace 이동하고, 이미 완료된 날이면 즉시 결과로 리다이렉트한다.",
+      "acceptance_criteria": [
+        "진행 중 새로고침 시 이미 답한 문항은 건너뛰고 다음 미답 문항부터 표시됨",
+        "선택지 탭 후 같은 문항의 다른 선택지를 다시 탭해도 답이 바뀌지 않고(잠금) 해설이 유지됨",
+        "3번째 문항 답변 시 navigate('/daily/result', { replace: true, state: { dateKey } }) 호출 1회",
+        "오늘 세션 status가 'completed'면 화면 진입 즉시 /daily/result로 replace 이동하고 선택지 Button 0개 렌더"
+      ]
+    },
+    "covers": [
+      "F1-AC-1",
+      "F1-AC-2",
+      "F1-AC-3"
+    ],
+    "files": [
+      "src/pages/Daily.tsx"
+    ],
+    "definition_of_done": [
+      "모든 UI가 TDS 컴포넌트, 여백은 Spacing만 사용, HEX 하드코딩 0건",
+      "선택지 Button 높이 large(44px 이상)",
+      "정답 haptic success, 오답 haptic tickStrong",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0010"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: ButtonStack(문항 + 선택지 버튼 스택). TDS whitelist: Top, Paragraph, Chip, Button, Spacing, Border, ProgressBar(없으면 Chip 텍스트로 대체), Toast.\nLayout:\n<Top title={<Top.TitleParagraph>오늘의 퀴즈</Top.TitleParagraph>} right={<Chip label={`${idx+1}/3`} variant=\"outlined\" />} />\n<Spacing size={16} />\n<Paragraph.Text typography=\"st13\" color=\"tertiary\">{question.category}</Paragraph.Text>\n<Spacing size={8} />\n<Paragraph.Text typography=\"t3\">{question.text}</Paragraph.Text>\n<Spacing size={24} />\n{question.choices.map((c,i)=>(<div key={i} style={{marginBottom:8}}><Button variant={picked===i?'fill':'weak'} size=\"large\" color={picked===i?(i===question.answerIndex?'primary':'danger'):'light'} onClick={()=>pick(i)}>{c}</Button></div>))}\n<Spacing size={24} /><Border /><Spacing size={16} />\n{picked!==null && <Paragraph.Text typography=\"st11\" color=\"secondary\">{question.explanation}</Paragraph.Text>}\n{picked!==null && <><Spacing size={16} /><Button variant=\"fill\" color=\"primary\" size=\"large\" onClick={next}>{isLast?'결과 보기':'다음 문제'}</Button></>}\nStates — Loading: 동기 렌더(스켈레톤 없음). Empty: 문항 조회 실패 시 '문제를 불러올 수 없어요' + '홈으로' Button. Error: 저장 실패 시 Toast '잠시 후 다시 시도해주세요' 1회, 화면 상태 유지.\nInteractions: 선택지 탭 → 정답 haptic success / 오답 tickStrong, 즉시 해설 노출 및 선택 잠금. 광고 배너는 이 화면에 배치하지 않음(집중 방해 금지)."
+  },
+  {
+    "id": "0014",
+    "title": "데일리 결과 `/daily/result` + 리워드 광고 심화 해설",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "오늘 점수와 문항별 정오답을 보여주는 결과 화면을 만든다. 심화 해설은 TossRewardAd로 게이트하여 광고 시청 후 해금하고 해금 상태는 dateKey 기준으로 유지된다. 공유하기와 오답노트 이동 CTA, 결과 하단 배너 광고를 배치한다.",
+      "acceptance_criteria": [
+        "문항별 ListRow 3개가 렌더되고 오답 행에 '오답' Chip(danger 톤)이 표시됨",
+        "심화 해설 영역이 최초에는 TossRewardAd 게이트로 감싸져 있고, 광고 시청 완료 후에만 deepExplanation 텍스트가 렌더됨",
+        "새로고침해도 같은 dateKey면 심화 해설이 다시 잠기지 않음(flags.deepExplainUnlockedDateKey 확인)",
+        "'공유하기' 탭 시 navigate('/share', { state: { dateKey } }) 호출 1회"
+      ]
+    },
+    "covers": [
+      "F5-AC-1",
+      "F5-AC-2",
+      "F1-AC-3",
+      "F8-진입"
+    ],
+    "files": [
+      "src/pages/DailyResult.tsx"
+    ],
+    "definition_of_done": [
+      "location.state 없이 직접 진입해도 오늘 dateKey로 폴백해 크래시 0건",
+      "AdSlot 배너는 결과 카드 아래에 1개만 렌더",
+      "TDS 컴포넌트만 사용, 여백은 Spacing, HEX 하드코딩 0건",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0009",
+      "0010",
+      "0011"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: ResultPanel(히어로 점수 + 문항 리스트 + 리워드 게이트). TDS whitelist: Top, SummaryHero, Amount, ListRow, Chip, Button, Spacing, Border, Paragraph, Toast + 템플릿 TossRewardAd/AdSlot.\nLayout:\n<Top title={<Top.TitleParagraph>오늘의 결과</Top.TitleParagraph>} />\n<SummaryHero label=\"오늘 점수\" value={<Amount value={score} unit=\"점\" typography=\"t1\" />} caption={`${correctCount}/3문제 정답 · ${streak}일 연속`} />\n<Spacing size={16} /><Border />\n{results.map(r=>(<ListRow key={r.questionId} contents={<ListRow.Texts type=\"2RowTypeA\" top={r.text} bottom={r.explanation} />} right={<Chip label={r.correct?'정답':'오답'} variant=\"filled\" />} />))}\n<Spacing size={24} />\n<Paragraph.Text typography=\"t5\">심화 해설</Paragraph.Text><Spacing size={8} />\n<TossRewardAd slotId={import.meta.env.VITE_TOSS_AD_SLOT_ID}>{deepExplanations.map(d=>(<><Paragraph.Text key={d.id} typography=\"st11\" color=\"secondary\">{d.text}</Paragraph.Text><Spacing size={12} /></>))}</TossRewardAd>\n<Spacing size={24} />\n<Button variant=\"fill\" color=\"primary\" size=\"large\" onClick={goShare}>공유하기</Button><Spacing size={8} />\n<Button variant=\"weak\" size=\"large\" onClick={()=>navigate('/notes')}>오답노트 보기</Button>\n<Spacing size={24} /><AdSlot adGroupId={import.meta.env.VITE_TOSS_AD_GROUP_ID} /><Spacing size={24} />\nStates — Loading: 동기 렌더. Empty: 해당 dateKey 세션이 없으면 '아직 오늘 퀴즈를 풀지 않았어요' + '퀴즈 풀러 가기' Button. Error: 광고 로드 실패 시 게이트는 잠긴 상태를 유지하고 Toast '광고를 불러오지 못했어요. 잠시 후 다시 시도해주세요' 1회.\nInteractions: 공유하기/오답노트 탭 → haptic success. 심화 해설 해금 시 haptic success 1회."
+  },
+  {
+    "id": "0015",
+    "title": "오답노트 목록 `/notes`",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "오답노트 목록 탭 루트를 만든다. 진입 시 손상·고아 행을 정제해 Toast 1회로 알리고, 상태 필터 Chip과 윈도잉 리스트로 200건에서도 DOM ListRow가 40개 이하를 유지하도록 렌더한다. 노트가 없으면 EmptyState와 데일리 이동 CTA를 보여준다.",
+      "acceptance_criteria": [
+        "노트 200건 스크롤 시 DOM 내 ListRow 개수가 항상 40 이하(한 번에 최대 30행 유지)",
+        "은행에 없는 questionId 행 N건 제거 시 Toast '복구할 수 없는 기록 1건을 정리했어요' 형식이 정확히 1회만 표시되고 console.error 0건",
+        "노트가 0건이면 EmptyState('아직 오답이 없어요' + '데일리 풀러 가기' Button)가 렌더되고 note-row 0개",
+        "note-row 탭 시 navigate(`/notes/${questionId}`) 호출"
+      ]
+    },
+    "covers": [
+      "F6-AC-5",
+      "F6-AC-6",
+      "F6-AC-7",
+      "F6-AC-8",
+      "F6-AC-12"
+    ],
+    "files": [
+      "src/pages/Notes.tsx"
+    ],
+    "definition_of_done": [
+      "각 행에 data-testid=\"note-row\" 부여",
+      "fqd:v1:notes가 배열이 아니면 '[]' 재초기화 후 빈 상태 렌더 + console.warn 1건, sessions/profile 유지",
+      "TDS 컴포넌트만 사용, 여백은 Spacing, HEX 하드코딩 0건",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0009"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: PageShell (탭 루트 + 필터 Chips + 윈도잉 리스트)\nTDS whitelist: Top, SummaryHero, Amount, Chip, ListRow, Spacing, Paragraph, Border, EmptyState, Button, Toast, AlertDialog, FloatingTabBar\nLayout:\n<Top title={<Top.TitleParagraph>오답노트</Top.TitleParagraph>} />\n<SummaryHero label=\"복습 대기\" value={<Amount value={todoCount} unit=\"개\" typography=\"t1\" />} caption={`전체 ${total}개 중 ${doneCount}개 복습했어요`} />\n<Spacing size={16} />\n{/* Pattern B — 상태 필터 */}\n<div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>\n  <Chip label=\"전체\" variant={f==='all'?'filled':'outlined'} selected={f==='all'} />\n  <Chip label=\"복습 전\" variant={f==='todo'?'filled':'outlined'} selected={f==='todo'} />\n  <Chip label=\"복습완료\" variant={f==='done'?'filled':'outlined'} selected={f==='done'} />\n</div>\n<Spacing size={12} /><Border />\n{/* AC-7 윈도잉: visibleRows = slice(start, start+30) → DOM ListRow ≤ 40 */}\n{visibleRows.map(n => (<ListRow key={n.questionId} data-testid=\"note-row\" onClick={() => navigate(`/notes/${n.questionId}`)} contents={<ListRow.Texts type=\"2RowTypeA\" top={n.title} bottom={n.category} />} right={<Chip label={n.status==='done'?'복습완료':'복습 전'} variant={n.status==='done'?'filled':'outlined'} />} />))}\n<Spacing size={24} /><FloatingTabBar />\n<Toast open={cleanupToast} position=\"bottom\" onClose={closeToast} />\n<AlertDialog open={badgeOpen} title=\"오답 20개 정복!\" alertButton={<AlertDialog.AlertButton onClick={closeBadge}>확인</AlertDialog.AlertButton>} onClose={closeBadge} />\nStates — Loading: SummaryHero 자리에 회색 블록(var(--tds-color-grey50)) + ListRow 3행 자리표시자, 200ms 이내 교체. Empty(AC-5/AC-12): <EmptyState title=\"아직 오답이 없어요\" description=\"데일리 퀴즈를 풀면 틀린 문제가 모여요\" action={<Button variant=\"weak\" onClick={()=>navigate('/')}>데일리 풀러 가기</Button>} />. Error: 스토리지 파싱 실패는 화면 에러 대신 '[]' 재초기화 후 Empty 렌더(console.warn 1건), 별도 에러 화면 없음.\nInteractions: Chip 탭 → 필터 전환 + haptic tickWeak; ListRow 탭 → navigate + tickWeak; 스크롤 → 윈도우 start 인덱스 갱신(DOM ListRow 40 이하); 진입 시 손상 행 정리 → Toast 1회(3초 자동 닫힘, 문항 문자열 미노출); 20번째 복습 완료 복귀 시 AlertDialog 1회 + haptic success."
+  },
+  {
+    "id": "0016",
+    "title": "오답 복습 `/notes/:questionId`",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "단일 문항 복습 화면을 만든다. questionId를 /^q-\\d{3}$/로 먼저 검증해 실패 시 조회 없이 빈 상태를 렌더하고 파라미터 문자열은 화면 어디에도 출력하지 않는다. 정답 선택 시 복습 완료 처리하되 이미 done인 노트는 무음으로 상태를 유지한다.",
+      "acceptance_criteria": [
+        "/notes/q-999(은행·노트 모두 없음) 진입 시 '문제를 찾을 수 없어요' + '목록으로' 버튼이 렌더되고 선택지 Button 0개, console.error 0건",
+        "/notes/<script>alert(1)</script> 또는 /notes/Q-7 진입 시 조회 시도 0회로 빈 상태 렌더, 파라미터 문자열 미출력, console.warn 1건(E_VALIDATION/400/field questionId)",
+        "'목록으로' 탭 시 navigate('/notes', { replace: true }) 호출",
+        "status가 이미 'done'인 노트에서 정답 재선택 시 reviewedAt 미갱신·뱃지 카운트 미증가이고 data-testid=\"review-result-chip\"에 '복습완료' 유지, AlertDialog 미표시"
+      ]
+    },
+    "covers": [
+      "F6-AC-9",
+      "F6-AC-10",
+      "F6-AC-11",
+      "F6-AC-8"
+    ],
+    "files": [
+      "src/pages/NoteReview.tsx"
+    ],
+    "definition_of_done": [
+      "20번째 복습 완료 시에만 AlertDialog '오답 20개 정복!' 1회 표시 + haptic success",
+      "TDS 컴포넌트만 사용, 여백은 Spacing, HEX 하드코딩 0건",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0003",
+      "0009"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: ButtonStack(문항 + 선택지 버튼 스택) + Top+우측액션\nTDS whitelist: Top, Paragraph, Chip, Button, Spacing, Border, EmptyState, AlertDialog, Toast\nLayout:\n<Top title={<Top.TitleParagraph>복습</Top.TitleParagraph>} right={<Chip data-testid=\"review-result-chip\" label={statusLabel} variant=\"filled\" />} />\n{/* AC-9/AC-10: /^q-\\d{3}$/ 실패 또는 은행 미존재 → 조회 없이 즉시 빈 상태, 파라미터 문자열 미출력 */}\n{!question ? (<EmptyState title=\"문제를 찾을 수 없어요\" description=\"목록에서 다시 선택해 주세요\" action={<Button variant=\"weak\" onClick={() => navigate('/notes', { replace: true })}>목록으로</Button>} />) : (<>\n  <Spacing size={16} />\n  <Paragraph.Text typography=\"st13\" color=\"tertiary\">{question.category}</Paragraph.Text>\n  <Spacing size={8} />\n  <Paragraph.Text typography=\"t3\">{question.text}</Paragraph.Text>\n  <Spacing size={24} />\n  {question.choices.map((c, i) => (<div key={i} style={{ marginBottom: 8 }}><Button variant={picked===i ? 'fill' : 'weak'} size=\"large\" color={picked===i ? (i===question.answerIndex ? 'primary' : 'danger') : 'light'} onClick={() => pick(i)}>{c}</Button></div>))}\n  <Spacing size={24} /><Border /><Spacing size={16} />\n  {picked !== null && <Paragraph.Text typography=\"st11\" color=\"secondary\">{question.explanation}</Paragraph.Text>}\n</>)}\n<AlertDialog open={badgeOpen} title=\"오답 20개 정복!\" alertButton={<AlertDialog.AlertButton onClick={closeBadge}>확인</AlertDialog.AlertButton>} onClose={closeBadge} />\n<Toast open={toastOpen} position=\"bottom\" onClose={closeToast} />\nStates — Loading: 로컬 조회이므로 스켈레톤 없음(동기 렌더). Empty(AC-9/AC-10): 위 EmptyState — 선택지 Button 0개, console.error 0건. Error: 저장 실패 시 Toast '잠시 후 다시 시도해주세요' 1회, 화면 상태 유지.\nInteractions: 선택지 탭 → 정답 haptic success / 오답 tickStrong, 즉시 해설 노출; 이미 done인 노트 재선택(AC-11)은 무음 처리; '목록으로' 탭 → replace 이동 + tickWeak; 20번째 완료 시 AlertDialog 1회 + haptic success."
+  },
+  {
+    "id": "0017",
+    "title": "주간 랭킹 `/rank` (로딩·정상·폴백·옵트인)",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "주간 랭킹 탭 루트를 만든다. 로딩 스켈레톤 8행, 상위 50행 리스트, 내 순위 고정 카드, 상태별 폴백 배너, 옵트인 BottomSheet를 한 화면에서 처리한다. 중복 에러 Toast를 억제하는 useErrorToast 훅도 함께 만들어 같은 코드의 Toast가 연속으로 쌓이지 않게 한다.",
+      "acceptance_criteria": [
+        "응답 entries 50건 수신 시 data-testid=\"rank-row\" 50개 렌더, 1~3위 행에 순위 Chip 표시, 내 순위 51위 이하면 data-testid=\"rank-me-sticky\" 카드가 리스트 상단 고정",
+        "응답 대기 중 data-testid=\"rank-skeleton\" 8개 표시 후 데이터 수신 시 교체되며 무한 표시 없음",
+        "500 2회 실패 시 캐시 있으면 캐시 렌더 + 배너 '랭킹을 불러오지 못해 마지막 순위를 보여드려요', 캐시 없으면 ContentIcon + '랭킹을 불러올 수 없어요' + '다시 시도' 버튼, console.error 0건",
+        "404 WEEK_NOT_FOUND면 '이번 주 랭킹이 아직 없어요' 빈 상태에 rank-row 0개이고 '다시 시도' 버튼은 렌더되지 않으며 rank-hero의 로컬 주간 점수는 유지",
+        "rankOptIn===false면 네트워크 호출 0회로 로컬 주간 점수만 렌더하고 '랭킹 참여하기' 버튼 → Switch가 든 BottomSheet 표시",
+        "429 대기 중 '다시 시도' 버튼이 disabled를 유지"
+      ]
+    },
+    "covers": [
+      "F7-AC-2",
+      "F7-AC-3",
+      "F7-AC-4",
+      "F7-AC-5",
+      "F7-AC-6",
+      "F7-AC-11",
+      "F7-AC-13",
+      "F7-AC-16",
+      "F7-AC-17",
+      "F7-AC-18",
+      "F9-AC-8"
+    ],
+    "files": [
+      "src/pages/Rank.tsx",
+      "src/components/RankOptInSheet.tsx",
+      "src/hooks/useErrorToast.ts"
+    ],
+    "definition_of_done": [
+      "배너 문구는 ERROR_CATALOG.userMessage에서만 가져오고 서버 message는 화면에 출력하지 않음",
+      "401이면 배너 '로그인 정보를 확인할 수 없어 랭킹은 이 기기에만 저장돼요' + 자동 재제출 0회, 403이면 '다른 사용자의 기록에는 접근할 수 없어요'",
+      "useErrorToast: 동일 code가 3초 내 재발생 시 Toast를 추가로 띄우지 않음",
+      "TDS 컴포넌트만 사용, 여백은 Spacing, HEX 하드코딩 0건, tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0008",
+      "0011"
+    ],
+    "db_schema": "",
+    "api_contract": "GET /v1/leaderboard?weekKey=YYYY-Www → 200 { entries: RankEntry[], me } | 404 WEEK_NOT_FOUND | 429 RATE_LIMITED(Retry-After) | 500 INTERNAL_ERROR | 503 SERVICE_UNAVAILABLE (호출은 rankApi 경유, 페이지에서 직접 fetch 금지)",
+    "dependencies": [],
+    "ui_requirements": "Pattern: StatusPanel(상단 상태 배너 + Hero + 리스트) — 탭 루트.\nTDS whitelist: Top, Border, Paragraph, SummaryHero, Amount, Chip, ListRow, Spacing, EmptyState, Button, Switch, BottomSheet, Toast, Asset.ContentIcon, FloatingTabBar + 템플릿 AdSlot.\nLayout:\n<Top title={<Top.TitleParagraph>주간 랭킹</Top.TitleParagraph>} />\n{banner && (<><Border /><Spacing size={12} /><Paragraph.Text typography=\"st11\" color=\"secondary\">{banner.userMessage}</Paragraph.Text><Spacing size={12} /></>)}\n<SummaryHero data-testid=\"rank-hero\" label=\"이번 주 내 점수\" value={<Amount value={weeklyScore} unit=\"점\" typography=\"t1\" />} caption={me ? `${me.total}명 중 ${me.rank}위` : '랭킹 참여 전이에요'} />\n<Spacing size={16} />\n{me && me.rank > 50 && <ListRow data-testid=\"rank-me-sticky\" contents={<ListRow.Texts type=\"2RowTypeA\" top={`${me.rank}위 · ${nickname}`} bottom={`${me.score}점`} />} />}\n<Border />\n{loading ? Array.from({length:8}).map((_,i)=>(<ListRow key={i} data-testid=\"rank-skeleton\" contents={<ListRow.Texts type=\"2RowTypeA\" top=\" \" bottom=\" \" />} />)) : entries.map(e=>(<ListRow key={e.userKey} data-testid=\"rank-row\" contents={<ListRow.Texts type=\"2RowTypeA\" top={e.nickname} bottom={`${e.score}점`} />} right={e.rank<=3 ? <Chip label={`${e.rank}위`} variant=\"filled\" /> : <Chip label={`${e.rank}위`} variant=\"outlined\" />} />))}\n<Spacing size={24} /><AdSlot adGroupId={import.meta.env.VITE_TOSS_AD_GROUP_ID} /><Spacing size={24} /><FloatingTabBar />\n<BottomSheet open={optInOpen} onClose={close}><ListRow contents={<ListRow.Texts type=\"2RowTypeA\" top=\"주간 랭킹 참여하기\" bottom=\"닉네임과 주간 점수만 전송돼요\" />} right={<Switch checked={optIn} onChange={toggle} />} /><Spacing size={16} /><Button variant=\"fill\" color=\"primary\" size=\"large\" onClick={confirm}>확인</Button></BottomSheet>\nStates — Loading: rank-skeleton 8행. Empty: <EmptyState icon={<Asset.ContentIcon />} title=\"이번 주 랭킹이 아직 없어요\" description=\"데일리 퀴즈를 풀고 첫 순위를 만들어 보세요\" />. Error(캐시 없음): ContentIcon + '랭킹을 불러올 수 없어요' + '다시 시도' Button. Fallback(캐시 있음): 캐시 렌더 + 상단 배너 + stale 표시.\nInteractions: Switch 토글 → haptic tickWeak + Flags 저장; '다시 시도' 탭 → haptic tickWeak, 대기 중 disabled; 배너·Toast 문구는 ERROR_CATALOG에서만. AdSlot 배너는 마지막 rank-row 아래, FloatingTabBar와 겹치지 않도록 컨테이너에 paddingBottom: 'calc(72px + env(safe-area-inset-bottom))'."
+  },
+  {
+    "id": "0018",
+    "title": "점수 공유 카드 `/share`",
+    "epic": "Epic 3. 코어 UI 페이지",
+    "task": {
+      "description": "오늘의 점수·스트릭·정답률을 담은 공유 카드 화면과 공유 텍스트 빌더를 만든다. 클립보드 복사가 실패해도 앱이 멈추지 않고 대체 안내 Toast를 띄우며, 외부 앱 설치 유도 문구나 외부 링크는 어디에도 포함하지 않는다.",
+      "acceptance_criteria": [
+        "buildShareText({score,streak,dateKey})가 점수·스트릭·정답률을 포함하고 URL·'설치'·'다운로드' 문자열을 0건 포함",
+        "'텍스트 복사' 탭 시 navigator.clipboard 성공하면 Toast '공유 문구를 복사했어요' 1회",
+        "클립보드 API 미지원/거부 시 throw 없이 Toast '복사하지 못했어요. 길게 눌러 복사해주세요'(E_CLIPBOARD_FAILED) 1회 + 선택 가능한 텍스트 블록 노출",
+        "state 없이 /share 직접 진입 시 오늘 dateKey로 폴백하고 세션이 없으면 '공유할 결과가 없어요' 빈 상태 + '퀴즈 풀러 가기' Button"
+      ]
+    },
+    "covers": [
+      "F8-AC-1",
+      "F8-AC-2",
+      "F8-AC-3",
+      "F9-AC-8"
+    ],
+    "files": [
+      "src/pages/Share.tsx",
+      "src/lib/shareText.ts"
+    ],
+    "definition_of_done": [
+      "공유 카드 영역은 TDS 컴포넌트 조합으로 구성하고 고정 px width 사용 0건",
+      "Flags.lastShareAt 갱신 1회",
+      "외부 링크·앱 설치 유도 문구 0건(정책 준수)",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0010",
+      "0011"
+    ],
+    "db_schema": "Flags.lastShareAt: number | null → localStorage key: 'fqd:v1:flags'",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "Pattern: CardPanel(공유 카드 + 액션 버튼 스택).\nTDS whitelist: Top, SummaryHero, Amount, Chip, Paragraph, Border, Spacing, Button, EmptyState, Toast, Asset.ContentIcon + 템플릿 AdSlot.\nLayout:\n<Top title={<Top.TitleParagraph>점수 공유</Top.TitleParagraph>} />\n<Spacing size={16} />\n{/* 공유 카드 (캡처 대상 영역) */}\n<div style={{ display:'flex', flexDirection:'column', borderRadius:16, background:'var(--tds-color-grey50)' }}>\n  <SummaryHero label={`${dateKey} 금융 퀴즈`} value={<Amount value={score} unit=\"점\" typography=\"t1\" />} caption={`${correctCount}/3 정답 · ${streak}일 연속`} />\n  <Spacing size={12} />\n  <div style={{ display:'flex', gap:8 }}><Chip label={`정답률 ${rate}%`} variant=\"filled\" /><Chip label={`${streak}일 연속`} variant=\"outlined\" /></div>\n  <Spacing size={16} />\n</div>\n<Spacing size={24} />\n<Paragraph.Text typography=\"st11\" color=\"secondary\">{shareText}</Paragraph.Text>\n<Spacing size={16} />\n<Button variant=\"fill\" color=\"primary\" size=\"large\" onClick={copy}>텍스트 복사</Button>\n<Spacing size={8} />\n<Button variant=\"weak\" size=\"large\" onClick={()=>navigate('/', { replace: true })}>홈으로</Button>\n<Spacing size={24} /><AdSlot adGroupId={import.meta.env.VITE_TOSS_AD_GROUP_ID} /><Spacing size={24} />\n<Toast open={toastOpen} position=\"bottom\" onClose={closeToast} />\nStates — Loading: 동기 렌더. Empty: <EmptyState icon={<Asset.ContentIcon />} title=\"공유할 결과가 없어요\" description=\"오늘의 퀴즈를 먼저 풀어보세요\" action={<Button variant=\"weak\" onClick={()=>navigate('/daily')}>퀴즈 풀러 가기</Button>} />. Error: 클립보드 실패 시 Toast 1회 + 텍스트 블록은 그대로 노출해 수동 복사 가능.\nInteractions: 복사 탭 → haptic success, 실패 시 haptic 없음 + Toast. 외부 링크/앱 설치 유도 문구 금지."
+  },
+  {
+    "id": "0019",
+    "title": "ErrorBoundary + 전역 rejection 핸들러 + 광고 섹션 컴포넌트",
+    "epic": "Epic 4. 통합/폴리시",
+    "task": {
+      "description": "앱 전체를 감싸는 클래스형 ErrorBoundary, unhandledrejection/error를 잡아 AppError 포맷으로 로깅하는 전역 핸들러, FloatingTabBar와 겹치지 않는 배너 광고 래퍼 컴포넌트를 만든다. src/App.tsx와 src/main.tsx는 절대 수정하지 않는다.",
+      "acceptance_criteria": [
+        "렌더 중 throw가 발생해도 흰 화면 대신 '문제가 생겼어요' + '다시 시도' Button이 렌더되고 버튼 탭 시 boundary 상태가 초기화됨",
+        "unhandledrejection 발생 시 console.warn('[FQD] {code} {httpStatus} {context}') 1건만 출력되고 userKey·닉네임 문자열은 포함되지 않음",
+        "AdSection이 하위에 AdSlot을 렌더하고 컨테이너에 paddingBottom: 'calc(72px + env(safe-area-inset-bottom))'를 적용해 탭바와 겹치지 않음",
+        "files에 src/App.tsx와 src/main.tsx가 포함되지 않음"
+      ]
+    },
+    "covers": [
+      "F9-AC-2",
+      "F9-AC-3",
+      "F9-AC-9",
+      "F7-AC-8"
+    ],
+    "files": [
+      "src/components/ErrorBoundary.tsx",
+      "src/lib/globalErrorHandler.ts",
+      "src/components/AdSection.tsx"
+    ],
+    "definition_of_done": [
+      "ErrorBoundary UI는 TDS(EmptyState/Button/Asset.ContentIcon)로만 구성, HEX 하드코딩 0건",
+      "globalErrorHandler는 install()/uninstall() 형태로 export되어 중복 등록 시 리스너가 2개가 되지 않음",
+      "tsc --noEmit 및 vite build 통과"
+    ],
+    "depends_on": [
+      "0002",
+      "0006"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [],
+    "ui_requirements": "ErrorBoundary fallback: <EmptyState icon={<Asset.ContentIcon />} title=\"문제가 생겼어요\" description=\"잠시 후 다시 시도해주세요\" action={<Button variant=\"weak\" size=\"large\" onClick={reset}>다시 시도</Button>} />. TDS 컴포넌트만 사용하고 여백은 Spacing(size 필수). AdSection: <div style={{ display:'flex', flexDirection:'column', paddingBottom:'calc(72px + env(safe-area-inset-bottom))' }}><Spacing size={24} /><AdSlot adGroupId={import.meta.env.VITE_TOSS_AD_GROUP_ID} /></div> — 배너는 콘텐츠 마지막 요소 아래에만 배치."
+  },
+  {
+    "id": "0020",
+    "title": "라우팅 8개 등록 + 전역 배선 (App.tsx 단독 소유)",
+    "epic": "4",
+    "task": {
+      "description": "src/App.tsx에서 BrowserRouter 라우트 8개(/, /daily, /daily/result, /notes, /notes/:questionId, /rank, /share, *)를 등록하고 ErrorBoundary와 전역 에러 핸들러를 배선한다. 탭 루트 3개(/, /notes, /rank)에만 FloatingTabBar가 보이도록 하고 존재하지 않는 경로는 홈으로 replace 이동시킨다. src/main.tsx는 수정하지 않는다.",
+      "acceptance_criteria": [
+        "8개 경로 모두 딥링크 직접 진입 시 404 없이 해당 페이지가 렌더됨(/daily/result, /share는 state 없이도 크래시 0건)",
+        "알 수 없는 경로(/foo) 진입 시 navigate('/', { replace: true })로 이동",
+        "ErrorBoundary가 Routes를 감싸고 앱 마운트 시 globalErrorHandler.install()이 1회 호출됨",
+        "FloatingTabBar가 /, /notes, /rank에서만 렌더되고 /daily, /daily/result, /notes/:questionId, /share에서는 렌더되지 않음"
+      ]
+    },
+    "covers": [
+      "F6-AC-9",
+      "F7-AC-8",
+      "F9-AC-2",
+      "라우팅-전체"
+    ],
+    "files": [
+      "src/App.tsx"
+    ],
+    "definition_of_done": [
+      "src/App.tsx를 수정하는 패킷은 전체에서 이 패킷 하나뿐이며 src/main.tsx의 @AI:ANCHOR 영역은 미변경",
+      "navigate 호출 시 RouteState 타입 준수, any 캐스팅 0건",
+      "npm run build 및 npx tsc --noEmit 통과, 콘솔 에러 0건으로 앱 부팅"
+    ],
+    "depends_on": [
+      "0012",
+      "0013",
+      "0014",
+      "0015",
+      "0016",
+      "0017",
+      "0018",
+      "0019"
+    ],
+    "db_schema": "",
+    "api_contract": "",
+    "dependencies": [
+      "react-router-dom"
+    ],
+    "ui_requirements": "라우팅 셸만 담당하며 화면 UI는 각 페이지가 소유한다. 구조: <ErrorBoundary><BrowserRouter><Routes><Route path=\"/\" element={<Home />} /><Route path=\"/daily\" element={<Daily />} /><Route path=\"/daily/result\" element={<DailyResult />} /><Route path=\"/notes\" element={<Notes />} /><Route path=\"/notes/:questionId\" element={<NoteReview />} /><Route path=\"/rank\" element={<Rank />} /><Route path=\"/share\" element={<Share />} /><Route path=\"*\" element={<Navigate to=\"/\" replace />} /></Routes></BrowserRouter></ErrorBoundary>. FloatingTabBar는 탭 루트 3개(홈/오답노트/랭킹)에서만 렌더하며 활성 탭은 컬러 틴트로 표시. TDS 외 UI 라이브러리 사용 0건, HEX 하드코딩 0건."
+  }
+]
