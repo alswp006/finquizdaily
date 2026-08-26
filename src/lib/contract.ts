@@ -8,8 +8,9 @@
 /** 일일 퀴즈의 기본 엔티티. questions.json 로더와 화면 렌더링에서 모두 필요 (구현: 패킷 heal-2-02) */
 export type Quiz = { id: string; question: string; options: string[]; correctAnswer: number; category: string; difficulty: 'easy' | 'medium' | 'hard'; explanations: { [key: number]: string } };
 
-/** 사용자의 일일 퀴즈 진행 상태. 저장/로드 및 화면 렌더링에서 공유 (구현: 패킷 heal-1-01) */
-export type QuizState = { userId?: string; date: string; currentQuizId: string; selectedAnswer?: number; isAnswered: boolean; isCorrect?: boolean; completedAt?: string };
+/** 사용자의 일일 퀴즈 진행 상태(단건 제출 상태). 저장/로드 및 화면 렌더링에서 공유 (구현: 패킷 heal-1-01)
+ * 이름 충돌 주의: src/lib/types.ts의 QuizState(집계 저장 상태)와는 다른 타입이다 — import 시 어느 쪽인지 명확히 구분할 것. */
+export type QuizAnswerState = { userId?: string; date: string; currentQuizId: string; selectedAnswer?: number; isAnswered: boolean; isCorrect?: boolean; completedAt?: string };
 
 /** 완료된 퀴즈 결과. 결과 페이지와 랭킹 페이지에서 사용 (구현: 패킷 heal-1-01) */
 export type QuizResult = { quizId: string; date: string; selectedAnswer: number; correctAnswer: number; isCorrect: boolean; category: string; difficulty: string; completedAt: string };
@@ -18,16 +19,16 @@ export type QuizResult = { quizId: string; date: string; selectedAnswer: number;
 export type loadDailyQuizFn = (date?: string) => Promise<Quiz>;
 
 /** 사용자의 일일 퀴즈 진행 상태를 저장소에서 로드 (구현: 패킷 heal-1-01) */
-export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizState | null>;
+export type loadUserQuizStateFn = (userId: string, date: string) => Promise<QuizAnswerState | null>;
 
 /** 사용자의 퀴즈 상태를 저장소에 저장 (구현: 패킷 heal-1-01) */
-export type saveUserQuizStateFn = (userId: string, state: QuizState) => Promise<void>;
+export type saveUserQuizStateFn = (userId: string, state: QuizAnswerState) => Promise<void>;
 
 /** 사용자의 완료된 퀴즈 히스토리 조회. ResultPage, WrongNotePage, RankingPage에서 사용 (구현: 패킷 heal-1-01) */
 export type getUserQuizHistoryFn = (userId: string, limit?: number) => Promise<QuizResult[]>;
 
 /** 퀴즈 로드, 상태 관리, 제출 로직을 통합한 커스텀 훅. heal-1-02의 모든 페이지에서 호출 (구현: 패킷 heal-2-02) */
-export type useDailyQuizFn = (date?: string) => { quiz: Quiz | null; state: QuizState | null; isLoading: boolean; error: Error | null; submitAnswer: (answer: number) => Promise<void> };
+export type useDailyQuizFn = (date?: string) => { quiz: Quiz | null; state: QuizAnswerState | null; isLoading: boolean; error: Error | null; submitAnswer: (answer: number) => Promise<void> };
 
 /** 날짜를 UI 표시용 문자열로 포맷. 화면 렌더링에서 사용 (구현: 패킷 heal-2-01) */
 export type formatDateFn = (date: string | Date) => string;
