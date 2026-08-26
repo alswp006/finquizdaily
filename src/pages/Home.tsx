@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ScreenScaffold } from '../components/ScreenScaffold';
 import { SummaryHero } from '../components/SummaryHero';
 import { Card } from '../components/Card';
+import { MiniBar } from '../components/MiniBar';
 
 /**
  * Golden Home page — 대시보드/탭-루트 골든 레퍼런스.
@@ -30,7 +31,12 @@ import { Card } from '../components/Card';
 const HIGHLIGHTS = [
   { title: '오늘', description: '아직 기록이 없어요' },
   { title: '이번 주', description: '기록 3건 · 평균 12분' },
+  { title: '스트릭', description: '아직 시작 전이에요' },
 ];
+
+// 주간 목표(7일) 대비 진행률 — 위 '이번 주' 기록(3건)과 동일한 데이터에서 파생.
+const WEEKLY_GOAL_DAYS = 7;
+const WEEKLY_DONE_DAYS = 3;
 
 export default function Home() {
   const navigate = useNavigate();
@@ -65,6 +71,19 @@ export default function Home() {
             contents={<ListRow.Texts type="2RowTypeA" top={h.title} bottom={h.description} />}
           />
         ))}
+      </Card>
+
+      <Spacing size={24} />
+
+      {/* 주간 진행률 — '이번 주' 데이터를 시각화(맨 숫자 나열 대신 MiniBar) */}
+      <Card testId="home-week-progress">
+        <Paragraph.Text typography="st13">이번 주 학습 현황</Paragraph.Text>
+        <Spacing size={12} />
+        <MiniBar ratio={WEEKLY_DONE_DAYS / WEEKLY_GOAL_DAYS} testId="home-week-progress-bar" />
+        <Spacing size={8} />
+        <Paragraph.Text typography="t7">
+          {WEEKLY_GOAL_DAYS}일 중 {WEEKLY_DONE_DAYS}일 풀었어요
+        </Paragraph.Text>
       </Card>
 
       <Spacing size={24} />

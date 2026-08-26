@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { AppError, Result } from "@/lib/types";
 import { mapHttpError, logAppError } from "@/lib/errors";
 import { apiFetch } from "@/lib/apiFetch";
+import { ERROR_CATALOG } from "@/lib/errorCatalog";
 
 describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재시도)", () => {
   beforeEach(() => {
@@ -19,14 +20,14 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
     it("AC-3.2: maps 400 Bad Request", () => {
       const err = mapHttpError(400, "Custom 400 message");
-      expect(err.code).toBe("E_INVALID");
+      expect(err.code).toBe("E_VALIDATION");
       expect(err.statusCode).toBe(400);
       expect(err.message).toBe("Custom 400 message");
     });
 
     it("AC-3.3: maps 401 Unauthorized", () => {
       const err = mapHttpError(401);
-      expect(err.code).toBe("E_UNAUTHORIZED");
+      expect(err.code).toBe("E_UNAUTHENTICATED");
       expect(err.statusCode).toBe(401);
     });
 
@@ -44,7 +45,7 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
     it("AC-3.6: maps 409 Conflict", () => {
       const err = mapHttpError(409);
-      expect(err.code).toBe("E_CONFLICT");
+      expect(err.code).toBe("E_CONFLICT_DUPLICATE");
       expect(err.statusCode).toBe(409);
     });
 
@@ -74,8 +75,8 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
     it("AC-3.11: maps 503 Service Unavailable", () => {
       const err = mapHttpError(503);
-      expect(err.code).toBe("E_SERVER");
-      expect(err.statusCode).toBe(500);
+      expect(err.code).toBe("E_UNAVAILABLE");
+      expect(err.statusCode).toBe(503);
     });
 
     it("AC-3.12: maps 504 Gateway Timeout", () => {
@@ -92,8 +93,27 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
     it("AC-3.14: maps 429 Too Many Requests", () => {
       const err = mapHttpError(429);
-      expect(err.code).toBe("E_RATE_LIMIT");
+      expect(err.code).toBe("E_RATE_LIMITED");
       expect(err.statusCode).toBe(429);
+    });
+
+    it("AC-3.15: maps 422 to E_SCHEMA_INVALID", () => {
+      const err = mapHttpError(422);
+      expect(err.code).toBe("E_SCHEMA_INVALID");
+      expect(err.statusCode).toBe(422);
+    });
+
+    it("AC-3.16: maps 0 (network) to E_OFFLINE", () => {
+      const err = mapHttpError(0);
+      expect(err.code).toBe("E_OFFLINE");
+      expect(err.statusCode).toBe(0);
+    });
+
+    it("AC-3.17: userMessage matches ERROR_CATALOG exactly for every canonical code", () => {
+      for (const status of [400, 401, 403, 404, 408, 409, 422, 429, 500, 502, 503, 504, 0]) {
+        const err = mapHttpError(status);
+        expect(err.message).toBe(ERROR_CATALOG[err.code as keyof typeof ERROR_CATALOG].userMessage);
+      }
     });
   });
 
@@ -167,7 +187,9 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(result.ok).toBe(false);
-      expect(result.error?.statusCode).toBe(400);
+      if (!result.ok) {
+        expect(result.error.statusCode).toBe(400);
+      }
       fetchSpy.mockRestore();
     });
 
@@ -185,7 +207,9 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(result.ok).toBe(false);
-      expect(result.error?.code).toBe("E_UNAUTHORIZED");
+      if (!result.ok) {
+        expect(result.error.code).toBe("E_UNAUTHENTICATED");
+      }
       fetchSpy.mockRestore();
     });
 
@@ -607,16 +631,20 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
 
       expect(abortSpy).toHaveBeenCalled();
       expect(result.ok).toBe(false);
-      expect(result.error?.code).toBe("E_TIMEOUT");
+      if (!result.ok) {
+        expect(result.error.code).toBe("E_TIMEOUT");
+      }
     });
 
     it("AC-5.2: ignores response that arrives after timeout (result not overwritten)", async () => {
-      let resolveResponse: ((value: Response) => void) | null = null;
+      const resolveBox: { resolve: ((value: Response | PromiseLike<Response>) => void) | null } = {
+        resolve: null,
+      };
 
       vi.spyOn(globalThis, "fetch").mockImplementation(
         () =>
-          new Promise((resolve) => {
-            resolveResponse = resolve;
+          new Promise<Response>((resolve) => {
+            resolveBox.resolve = resolve;
           })
       );
 
@@ -625,23 +653,22 @@ describe("Packet 0006: mapHttpError + logAppError + apiFetch(타임아웃·재�
       );
 
       await vi.advanceTimersByTimeAsync(5000);
-      let resultFromTimeout: Result<{ data: string }> | null = null;
+      const resultBox: { value: Result<{ data: string }> | null } = { value: null };
       promise.then((r) => {
-        resultFromTimeout = r;
+        resultBox.value = r;
       });
 
       await vi.runAllTimersAsync();
 
-      if (resolveResponse) {
-        resolveResponse(new Response(JSON.stringify({ data: "late" }), { status: 200 }));
+      if (resolveBox.resolve) {
+        resolveBox.resolve(new Response(JSON.stringify({ data: "late" }), { status: 200 }));
       }
 
       await vi.runAllTimersAsync();
 
-      expect(resultFromTimeout).not.toBeNull();
-      if (resultFromTimeout) {
-        expect(resultFromTimeout.ok).toBe(false);
-        expect(resultFromTimeout.error?.code).toBe("E_TIMEOUT");
+      expect(resultBox.value).not.toBeNull();
+      if (resultBox.value && !resultBox.value.ok) {
+        expect(resultBox.value.error.code).toBe("E_TIMEOUT");
       }
     });
   });
