@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Top, Paragraph, Spacing, ListRow, Loader } from "@toss/tds-mobile";
 import { adaptive } from "@toss/tds-colors";
 import EmptyState from "@/components/EmptyState";
@@ -11,8 +12,8 @@ interface RankingEntry {
   count: number;
 }
 
-// 랭킹 API 엔드포인트가 아직 없어요 — 값이 채워지기 전까지는 항상 로컬 모드로 폴백해요.
-const RANKING_API_URL = "";
+// 랭킹 API 엔드포인트 배포 전까지는 값이 비어 있어 항상 로컬 모드로 폴백한다.
+const RANKING_API_URL: string = import.meta.env.VITE_LEADERBOARD_API_BASE ?? "";
 
 function toLocalEntries(records: WeeklyRecord[]): RankingEntry[] {
   return [...records]
@@ -21,6 +22,7 @@ function toLocalEntries(records: WeeklyRecord[]): RankingEntry[] {
 }
 
 export default function RankingPage() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<RankingEntry[]>([]);
   const [isLocalMode, setIsLocalMode] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,7 +71,20 @@ export default function RankingPage() {
 
   return (
     <div>
-      <Top title="랭킹" />
+      <Top
+        title="랭킹"
+        right={
+          <button
+            type="button"
+            onClick={() => navigate("/result")}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+          >
+            <Paragraph typography="st9" color={adaptive.blue500}>
+              결과로
+            </Paragraph>
+          </button>
+        }
+      />
       {isLoading ? (
         <div style={{ display: "flex", justifyContent: "center", padding: "48px 0" }}>
           <Loader />

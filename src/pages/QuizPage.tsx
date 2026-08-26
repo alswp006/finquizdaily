@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Top, Paragraph, Spacing, ListRow, FixedBottomCTA } from "@toss/tds-mobile";
 import { adaptive } from "@toss/tds-colors";
 import { loadQuestions, loadQuizState } from "@/lib/quizState";
 import { setItem } from "@/lib/storage";
-import { getTodayDateString } from "@/lib/date";
+import { getTodayDateString, weekKey } from "@/lib/date";
 import EmptyState from "@/components/EmptyState";
 import type { QuestionOption } from "@/lib/types";
 
@@ -22,8 +22,16 @@ export default function QuizPage() {
   const index = routeState.index ?? 0;
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [correctCount, setCorrectCount] = useState(0);
 
   const question = questions?.[index];
+
+  // 같은 "/quiz" 경로에서 문항만 바뀌는 경우 컴포넌트가 리마운트되지 않는다 —
+  // 문항이 바뀔 때마다 선택·제출 상태를 명시적으로 리셋해야 CTA가 다시 활성화된다.
+  useEffect(() => {
+    setSelectedId(null);
+    setIsSubmitting(false);
+  }, [index]);
 
   if (!question) {
     return (
@@ -47,26 +55,45 @@ export default function QuizPage() {
     setIsSubmitting(true);
 
     const selectedOption = options.find((option: QuestionOption) => option.id === selectedId);
-    if (selectedOption && !selectedOption.isCorrect) {
-      const state = loadQuizState();
-      const wrongAnswers = state.wrongAnswers ?? [];
-      setItem(QUIZ_STATE_KEY, {
-        ...state,
-        wrongAnswers: [
-          ...wrongAnswers,
-          {
-            questionId: question.id,
-            date: getTodayDateString(),
-            selectedOptionId: selectedId,
-          },
-        ],
-      });
+    const isCorrect = !!selectedOption?.isCorrect;
+    const state = loadQuizState();
+
+    // 같은 문항을 여러 번 틀려도 오답노트에는 최신 한 건만 남긴다(중복 누적 방지).
+    let wrongAnswers = state.wrongAnswers ?? [];
+    if (!isCorrect) {
+      wrongAnswers = [
+        ...wrongAnswers.filter((wrong) => wrong.questionId !== question.id),
+        {
+          questionId: question.id,
+          date: getTodayDateString(),
+          selectedOptionId: selectedId,
+        },
+      ];
     }
 
+    const newCorrectCount = correctCount + (isCorrect ? 1 : 0);
+    setCorrectCount(newCorrectCount);
+
     const nextIndex = index + 1;
-    if (nextIndex >= (questions?.length ?? 0)) {
-      navigate("/result");
+    const isLastQuestion = nextIndex >= (questions?.length ?? 0);
+
+    if (isLastQuestion) {
+      const weeklyRecords = state.weeklyRecords ?? [];
+      const currentWeek = Number(weekKey().split("W")[1]);
+      const existingIndex = weeklyRecords.findIndex((record) => record.week === currentWeek);
+      const nextWeeklyRecords =
+        existingIndex >= 0
+          ? weeklyRecords.map((record, i) =>
+              i === existingIndex ? { ...record, count: record.count + newCorrectCount } : record
+            )
+          : [...weeklyRecords, { week: currentWeek, count: newCorrectCount }];
+
+      setItem(QUIZ_STATE_KEY, { ...state, wrongAnswers, weeklyRecords: nextWeeklyRecords });
+      navigate("/result", { state: { correctCount: newCorrectCount } });
     } else {
+      if (!isCorrect) {
+        setItem(QUIZ_STATE_KEY, { ...state, wrongAnswers });
+      }
       navigate("/quiz", { state: { index: nextIndex } });
     }
   };

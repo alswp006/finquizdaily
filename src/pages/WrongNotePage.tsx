@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Top, Spacing, Paragraph, ListRow } from "@toss/tds-mobile";
 import { adaptive } from "@toss/tds-colors";
 import EmptyState from "@/components/EmptyState";
@@ -5,13 +6,27 @@ import { loadQuestions, loadQuizState } from "@/lib/quizState";
 import { formatDate } from "@/lib/date";
 
 export default function WrongNotePage() {
+  const navigate = useNavigate();
   const state = loadQuizState();
   const questions = loadQuestions();
   const wrongAnswers = state.wrongAnswers ?? [];
 
   return (
     <div>
-      <Top title="오답노트" />
+      <Top
+        title="오답노트"
+        right={
+          <button
+            type="button"
+            onClick={() => navigate("/result")}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+          >
+            <Paragraph typography="st9" color={adaptive.blue500}>
+              결과로
+            </Paragraph>
+          </button>
+        }
+      />
       <Spacing size={12} />
       {wrongAnswers.length === 0 ? (
         <EmptyState
