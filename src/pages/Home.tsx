@@ -46,11 +46,12 @@ export default function Home() {
       top={<Top title={<Top.TitleParagraph>FinQuizDaily</Top.TitleParagraph>} />}
     >
       {/* 시각 앵커: 헤드라인 + 카드 내 진입 버튼(부유 금지, display="block" 전체폭).
-          데이터 앱이면 value를 <Amount typography="t1" />(핵심 숫자)로 교체하라. */}
+          데이터 앱이면 value를 <Amount typography="t1" />(핵심 숫자)로 교체하라.
+          label은 상단 Top 타이틀과 같은 문구를 쓰지 않는다(중복 노출 방지) — 카테고리/설명 문구로. */}
       <SummaryHero
-        label="FinQuizDaily"
-        value={<Paragraph.Text typography="t2">매일 3문제씩 풀며 금융 상식을 키우는 데일리 금융 리터러시 퀴즈, 랭킹과 스트릭으로 습관화</Paragraph.Text>}
-        caption="로그인 없이 바로 쓸 수 있어요"
+        label="오늘의 퀴즈"
+        value={<Paragraph.Text typography="t2">3문제로 오늘 금융 감각 확인하기</Paragraph.Text>}
+        caption="로그인 없이 바로 풀 수 있어요"
         action={
           // 라벨은 앱의 핵심 행동 동사로 교체하라 — "연봉 계산하기"/"기록 남기기" 등.
           // generic "시작하기"/"확인"은 카피 규칙 위반. onClick도 실제 첫 화면 경로로.
@@ -84,6 +85,23 @@ export default function Home() {
         <Paragraph.Text typography="t7">
           {WEEKLY_GOAL_DAYS}일 중 {WEEKLY_DONE_DAYS}일 풀었어요
         </Paragraph.Text>
+      </Card>
+
+      <Spacing size={24} />
+
+      {/* 랭킹 미리보기 — 홈 하단 여백을 채우는 세 번째 카드(앱 설명의 '랭킹' 기능과 연결) */}
+      <Card testId="home-ranking">
+        <Paragraph.Text typography="st13">이번 주 랭킹</Paragraph.Text>
+        <Spacing size={12} />
+        <ListRow
+          contents={
+            <ListRow.Texts
+              type="2RowTypeA"
+              top="아직 순위가 없어요"
+              bottom="퀴즈를 풀면 랭킹에 등록돼요"
+            />
+          }
+        />
       </Card>
 
       <Spacing size={24} />
