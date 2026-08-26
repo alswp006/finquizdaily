@@ -20,6 +20,7 @@ export default function QuizPage() {
   const routeState = (location.state ?? {}) as QuizRouteState;
   const index = routeState.index ?? 0;
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const question = questions?.[index];
 
@@ -41,7 +42,8 @@ export default function QuizPage() {
   const options = question.options ?? [];
 
   const handleNext = () => {
-    if (!selectedId) return;
+    if (!selectedId || isSubmitting) return;
+    setIsSubmitting(true);
 
     const selectedOption = options.find((option: QuestionOption) => option.id === selectedId);
     if (selectedOption && !selectedOption.isCorrect) {
@@ -90,7 +92,7 @@ export default function QuizPage() {
           }
         />
       ))}
-      <FixedBottomCTA disabled={!selectedId} onClick={handleNext}>
+      <FixedBottomCTA disabled={!selectedId || isSubmitting} onClick={handleNext}>
         다음 문제
       </FixedBottomCTA>
     </div>

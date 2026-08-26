@@ -11,6 +11,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    target: 'es2019',
     sourcemap: false,
     // @apps-in-toss/web-framework는 절대 external 금지.
     // SDK는 importmap이 아닌 window.ReactNativeWebView 글로벌로 통신하므로
