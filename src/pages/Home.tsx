@@ -1,9 +1,10 @@
 import { Top, Paragraph, Spacing, ListRow, Button } from '@toss/tds-mobile';
-import { useNavigate } from 'react-router-dom';
+import { useRef } from 'react';
 import { ScreenScaffold } from '../components/ScreenScaffold';
 import { SummaryHero } from '../components/SummaryHero';
 import { Card } from '../components/Card';
 import { MiniBar } from '../components/MiniBar';
+import { EmptyState } from '../components/StateView';
 
 /**
  * Golden Home page — 대시보드/탭-루트 골든 레퍼런스.
@@ -39,7 +40,14 @@ const WEEKLY_GOAL_DAYS = 7;
 const WEEKLY_DONE_DAYS = 3;
 
 export default function Home() {
-  const navigate = useNavigate();
+  const highlightsRef = useRef<HTMLDivElement>(null);
+
+  // 아직 /daily 진입 화면이 없어 라우팅 대신 오늘 기록 카드로 스크롤한다.
+  // navigate('/')는 같은 경로를 다시 push해 클릭해도 화면이 안 바뀌고
+  // 히스토리만 쌓여, 뒤로가기를 반복하면 앱 밖(빈 화면)까지 밀려나는 원인이었다.
+  const focusTodayHighlight = () => {
+    highlightsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
 
   return (
     <ScreenScaffold
@@ -53,10 +61,8 @@ export default function Home() {
         value={<Paragraph.Text typography="t2">3문제로 오늘 금융 감각 확인하기</Paragraph.Text>}
         caption="로그인 없이 바로 풀 수 있어요"
         action={
-          // 라벨은 앱의 핵심 행동 동사로 교체하라 — "연봉 계산하기"/"기록 남기기" 등.
-          // generic "시작하기"/"확인"은 카피 규칙 위반. onClick도 실제 첫 화면 경로로.
-          <Button variant="fill" display="block" onClick={() => navigate('/')}>
-            첫 결과 보기
+          <Button variant="fill" display="block" onClick={focusTodayHighlight}>
+            오늘 기록 확인하기
           </Button>
         }
         testId="home-hero"
@@ -65,13 +71,15 @@ export default function Home() {
       <Spacing size={24} />
 
       {/* 핵심 정보는 Card로 묶기(raw div 금지) — 위계 생성 */}
-      <Card testId="home-highlights">
-        {HIGHLIGHTS.map((h, idx) => (
-          <ListRow
-            key={idx}
-            contents={<ListRow.Texts type="2RowTypeA" top={h.title} bottom={h.description} />}
-          />
-        ))}
+      <Card testId="home-highlights" style={{ scrollMarginTop: 16 }}>
+        <div ref={highlightsRef}>
+          {HIGHLIGHTS.map((h, idx) => (
+            <ListRow
+              key={idx}
+              contents={<ListRow.Texts type="2RowTypeA" top={h.title} bottom={h.description} />}
+            />
+          ))}
+        </div>
       </Card>
 
       <Spacing size={24} />
@@ -89,17 +97,17 @@ export default function Home() {
 
       <Spacing size={24} />
 
-      {/* 랭킹 미리보기 — 홈 하단 여백을 채우는 세 번째 카드(앱 설명의 '랭킹' 기능과 연결) */}
+      {/* 랭킹 — 아직 등록된 순위가 없을 때도 다음 행동(오늘 퀴즈 확인)으로 이어지는 경로를 둔다 */}
       <Card testId="home-ranking">
         <Paragraph.Text typography="st13">이번 주 랭킹</Paragraph.Text>
         <Spacing size={12} />
-        <ListRow
-          contents={
-            <ListRow.Texts
-              type="2RowTypeA"
-              top="아직 순위가 없어요"
-              bottom="퀴즈를 풀면 랭킹에 등록돼요"
-            />
+        <EmptyState
+          title="아직 순위가 없어요"
+          description="퀴즈를 풀면 랭킹에 등록돼요"
+          action={
+            <Button variant="weak" onClick={focusTodayHighlight}>
+              오늘 기록 확인하기
+            </Button>
           }
         />
       </Card>
