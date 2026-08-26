@@ -1,5 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { Top, Paragraph, Spacing, FixedBottomCTA } from "@toss/tds-mobile";
+import { Top, Paragraph, Spacing, ListRow, FixedBottomCTA } from "@toss/tds-mobile";
+import { adaptive } from "@toss/tds-colors";
 import EmptyState from "@/components/EmptyState";
 import { loadQuestions, loadQuizState } from "@/lib/quizState";
 
@@ -38,6 +39,18 @@ export default function ResultPage() {
       <Paragraph typography="t2" textAlign="center">
         {`${total}문제 중 ${correctCount}문제를 맞혔어요`}
       </Paragraph>
+      <Spacing size={24} />
+      <ListRow
+        data-testid="result-ranking-entry"
+        contents={<Paragraph typography="t5">이번 주 랭킹 보기</Paragraph>}
+        onClick={() => navigate("/ranking")}
+        withTouchEffect
+        right={
+          <Paragraph typography="st9" color={adaptive.grey600}>
+            {">"}
+          </Paragraph>
+        }
+      />
       <FixedBottomCTA onClick={() => navigate("/wrong-note")}>오답노트 보기</FixedBottomCTA>
     </div>
   );

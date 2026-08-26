@@ -1,0 +1,9 @@
+{
+  "app_id": "fac_finquizdaily_1ma0",
+  "name": "FinQuizDaily",
+  "base_url_env": "FAC_FINQUIZDAILY_1MA0_BASE_URL",
+  "profile": "experimental",
+  "level": "smoke",
+  "created_by": "factory",
+  "created_at": "2026-08-26"
+}
