@@ -49,21 +49,22 @@ echo "AC-4: grep 게이트 검증"
 echo "========================================"
 
 # AC-4.1: window.open / window.location.href 사용 금지
+# 테스트 파일은 이 게이트를 설명하는 문자열(주석·테스트명)을 포함하므로 검사 대상에서 제외한다.
 echo "Checking for window.open / window.location.href..."
-OUTLINK_COUNT=$(grep -rE "window\.(open|location\.href)" src/ --include="*.ts" --include="*.tsx" | wc -l)
+OUTLINK_COUNT=$(grep -rE "window\.(open|location\.href)" src/ --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude-dir="__tests__" | wc -l)
 if [ "$OUTLINK_COUNT" -gt 0 ]; then
   echo "❌ AC-4.1 FAIL: 외부 이탈 금지 (window.open/location.href) — $OUTLINK_COUNT건"
-  grep -rE "window\.(open|location\.href)" src/ --include="*.ts" --include="*.tsx"
+  grep -rE "window\.(open|location\.href)" src/ --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude-dir="__tests__"
   exit 1
 fi
 echo "✅ AC-4.1 PASS: window.open/location.href 0건"
 
 # AC-4.2: 직접 정의 HEX 컬러 패턴 금지
 echo "Checking for hardcoded HEX colors..."
-HEX_COUNT=$(grep -rE "#[0-9a-fA-F]{3,8}" src/ --include="*.ts" --include="*.tsx" | grep -v "^.*://\|^.*@\|^.*comment\|^.*//\|^.*\*" | wc -l)
+HEX_COUNT=$(grep -rE "#[0-9a-fA-F]{3,8}" src/ --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude-dir="__tests__" | grep -v "^.*://\|^.*@\|^.*comment\|^.*//\|^.*\*" | wc -l)
 if [ "$HEX_COUNT" -gt 0 ]; then
   echo "⚠️  AC-4.2 WARNING: 직접 정의 HEX 컬러 $HEX_COUNT건 발견 (TDS 토큰 사용 권장)"
-  grep -rE "#[0-9a-fA-F]{3,8}" src/ --include="*.ts" --include="*.tsx" | head -5 || true
+  grep -rE "#[0-9a-fA-F]{3,8}" src/ --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" --exclude-dir="__tests__" | head -5 || true
 fi
 echo "✅ AC-4.2 PASS: HEX 컬러 체크 완료"
 

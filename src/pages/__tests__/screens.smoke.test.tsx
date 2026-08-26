@@ -149,4 +149,18 @@ describe("화면 렌더 스모크 (데이터 없음)", () => {
     ).not.toThrow();
     expect(screen.getAllByTestId("wrong-note-item")).toHaveLength(1);
   });
+
+  it("App: 루트('/') 진입 시 /quiz로 라우팅되고 크래시하지 않는다", async () => {
+    const { default: App } = await import("@/App");
+
+    expect(() => renderAt(React.createElement(App), { pathname: "/" })).not.toThrow();
+    expect(screen.getByTestId("quiz-question")).toBeInTheDocument();
+  });
+
+  it("App: 정의되지 않은 경로는 /quiz로 폴백되고 크래시하지 않는다(막다른 길 방지)", async () => {
+    const { default: App } = await import("@/App");
+
+    expect(() => renderAt(React.createElement(App), { pathname: "/unknown-route" })).not.toThrow();
+    expect(screen.getByTestId("quiz-question")).toBeInTheDocument();
+  });
 });

@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots"
+    "test:visual:update": "playwright test --update-snapshots",
+    "verify:build": "bash scripts/verify-build.sh"
   },
   "dependencies": {
     "react": "^18.0.0",
