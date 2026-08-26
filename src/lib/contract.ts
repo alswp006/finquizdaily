@@ -8,11 +8,24 @@
 /** 문항 구조 (구현: 패킷 0001) */
 export type Question = { id: string; text: string; options: string[]; correct: number; explanation: string };
 
-/** 에러 표준화 (구현: 패킷 0002) */
-export type AppError = { code: string; message: string; statusCode?: number; timestamp: string };
-
 /** 에러 분류 (구현: 패킷 0002) */
-export type ErrorCode = enum { NETWORK_TIMEOUT = "NETWORK_TIMEOUT"; INVALID_SCHEMA = "INVALID_SCHEMA"; RANK_API_FAILED = "RANK_API_FAILED"; STORAGE_CORRUPTED = "STORAGE_CORRUPTED" };
+export type ErrorCode =
+  | "NETWORK_TIMEOUT"
+  | "INVALID_SCHEMA"
+  | "RANK_API_FAILED"
+  | "STORAGE_CORRUPTED"
+  | "E_SCHEMA_INVALID"
+  | "E_NOT_FOUND"
+  | "E_VALIDATION"
+  | "E_CONFLICT_DUPLICATE"
+  | "E_LIMIT_EXCEEDED"
+  | "E_SERVER"
+  | "E_TYPE_MISMATCH"
+  | "E_UNAUTHENTICATED"
+  | "E_FORBIDDEN";
+
+/** 에러 표준화 (구현: 패킷 0002) */
+export type AppError = { code: ErrorCode; message: string; httpStatus?: number; field?: string; timestamp: string };
 
 /** 문항 조회 (구현: 패킷 0003) */
 export type getQuestionFn = (questionId: string) => Question | null;
@@ -45,7 +58,7 @@ export type getWeekKeyFn = (date?: Date) => string;
 export type clampScoreFn = (score: number) => number;
 
 /** 점수 서버 제출 (구현: 패킷 0008) */
-export type submitScoreFn = (score: number, weekKey: string) => Promise<{ rank: number; totalSubmitted: number }>;
+export type submitScoreFn = (score: number, weekKey: string, streak: number) => Promise<{ rank: number; total: number }>;
 
 /** 주간 랭킹 조회 (구현: 패킷 0008) */
 export type fetchLeaderboardFn = (weekKey: string) => Promise<LeaderboardEntry[]>;
