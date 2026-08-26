@@ -1,0 +1,82 @@
+[
+  {
+    "id": "q1",
+    "question": "예금자보호법에 따라 원금과 이자를 합쳐 1인당 최대 얼마까지 보호받을 수 있을까?",
+    "options": [
+      { "id": "q1-a", "text": "3천만 원", "isCorrect": false },
+      { "id": "q1-b", "text": "5천만 원", "isCorrect": true },
+      { "id": "q1-c", "text": "1억 원", "isCorrect": false }
+    ],
+    "explanation": "예금보험공사는 은행별로 1인당 원금과 이자를 합쳐 5천만 원까지 보호한다."
+  },
+  {
+    "id": "q2",
+    "question": "신용점수를 깎는 요인이 아닌 것은?",
+    "options": [
+      { "id": "q2-a", "text": "카드값 연체", "isCorrect": false },
+      { "id": "q2-b", "text": "여러 곳에서 대출 신청", "isCorrect": false },
+      { "id": "q2-c", "text": "체크카드 사용 늘리기", "isCorrect": true }
+    ],
+    "explanation": "체크카드는 신용거래가 아니라서 점수에 영향을 주지 않는다."
+  },
+  {
+    "id": "q3",
+    "question": "복리로 연 6% 수익이 나면 원금이 두 배가 되는 데 걸리는 기간을 어림하는 계산법은?",
+    "options": [
+      { "id": "q3-a", "text": "72의 법칙", "isCorrect": true },
+      { "id": "q3-b", "text": "50의 법칙", "isCorrect": false },
+      { "id": "q3-c", "text": "100의 법칙", "isCorrect": false }
+    ],
+    "explanation": "72를 수익률로 나누면 원금이 두 배 되는 기간이 나온다. 72÷6=12년."
+  },
+  {
+    "id": "q4",
+    "question": "코스피(KOSPI)가 나타내는 것은?",
+    "options": [
+      { "id": "q4-a", "text": "국채 금리", "isCorrect": false },
+      { "id": "q4-b", "text": "코스닥 상장사 시가총액", "isCorrect": false },
+      { "id": "q4-c", "text": "유가증권시장 상장사 주가 지수", "isCorrect": true }
+    ],
+    "explanation": "코스피는 유가증권시장에 상장된 종목들의 주가를 종합한 지수다."
+  },
+  {
+    "id": "q5",
+    "question": "연말정산에서 세금을 직접 깎아주는 항목은?",
+    "options": [
+      { "id": "q5-a", "text": "소득공제", "isCorrect": false },
+      { "id": "q5-b", "text": "세액공제", "isCorrect": true },
+      { "id": "q5-c", "text": "과세표준", "isCorrect": false }
+    ],
+    "explanation": "소득공제는 과세 대상 소득을 줄이고, 세액공제는 계산된 세금 자체를 줄인다."
+  },
+  {
+    "id": "q6",
+    "question": "기준금리가 오르면 일반적으로 예금 금리는 어떻게 될까?",
+    "options": [
+      { "id": "q6-a", "text": "따라서 오른다", "isCorrect": true },
+      { "id": "q6-b", "text": "따라서 내린다", "isCorrect": false },
+      { "id": "q6-c", "text": "영향이 없다", "isCorrect": false }
+    ],
+    "explanation": "한국은행이 기준금리를 올리면 은행들도 예·적금 금리를 함께 올리는 경우가 많다."
+  },
+  {
+    "id": "q7",
+    "question": "ETF(상장지수펀드)의 특징으로 옳은 것은?",
+    "options": [
+      { "id": "q7-a", "text": "주식처럼 실시간 매매가 가능하다", "isCorrect": true },
+      { "id": "q7-b", "text": "은행 예금처럼 원금이 보장된다", "isCorrect": false },
+      { "id": "q7-c", "text": "가입 후 5년간 해지할 수 없다", "isCorrect": false }
+    ],
+    "explanation": "ETF는 거래소에 상장돼 있어 주식처럼 장중에 사고팔 수 있다."
+  },
+  {
+    "id": "q8",
+    "question": "월급 320만 원 중 150만 원을 저축했다면 저축률은?",
+    "options": [
+      { "id": "q8-a", "text": "약 47%", "isCorrect": true },
+      { "id": "q8-b", "text": "약 32%", "isCorrect": false },
+      { "id": "q8-c", "text": "약 65%", "isCorrect": false }
+    ],
+    "explanation": "150 ÷ 320 ≈ 0.47, 저축률은 약 47%다."
+  }
+]
