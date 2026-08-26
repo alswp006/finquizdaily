@@ -4,6 +4,7 @@ import { Top, Paragraph, Spacing, ListRow, FixedBottomCTA } from "@toss/tds-mobi
 import { adaptive } from "@toss/tds-colors";
 import { loadQuestions, loadQuizState } from "@/lib/quizState";
 import { setItem } from "@/lib/storage";
+import { getTodayDateString } from "@/lib/date";
 import EmptyState from "@/components/EmptyState";
 import type { QuestionOption } from "@/lib/types";
 
@@ -55,7 +56,7 @@ export default function QuizPage() {
           ...wrongAnswers,
           {
             questionId: question.id,
-            date: new Date().toISOString().slice(0, 10),
+            date: getTodayDateString(),
             selectedOptionId: selectedId,
           },
         ],

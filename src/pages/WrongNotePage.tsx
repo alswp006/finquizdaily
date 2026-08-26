@@ -2,6 +2,7 @@ import { Top, Spacing, Paragraph, ListRow } from "@toss/tds-mobile";
 import { adaptive } from "@toss/tds-colors";
 import EmptyState from "@/components/EmptyState";
 import { loadQuestions, loadQuizState } from "@/lib/quizState";
+import { formatDate } from "@/lib/date";
 
 export default function WrongNotePage() {
   const state = loadQuizState();
@@ -31,7 +32,9 @@ export default function WrongNotePage() {
                 <div>
                   <Paragraph typography="t5">{question?.question ?? "삭제된 문제예요"}</Paragraph>
                   <Paragraph typography="st9" color={adaptive.grey600}>
-                    {selected ? `선택한 답: ${selected.text}` : wrong.date}
+                    {selected
+                      ? `${formatDate(wrong.date)} · 선택한 답: ${selected.text}`
+                      : formatDate(wrong.date)}
                   </Paragraph>
                 </div>
               }

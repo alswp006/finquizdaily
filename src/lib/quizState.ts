@@ -1,6 +1,7 @@
 import type { Question, QuizState } from "@/lib/types";
 import type { QuizResult } from "@/lib/contract";
 import { getItem, DEFAULT_QUIZ_STATE, DEFAULT_QUESTIONS } from "@/lib/storage";
+import { getTodayDateString } from "@/lib/date";
 
 const QUIZ_STATE_KEY = "quiz-state";
 const QUESTIONS_KEY = "questions";
@@ -19,7 +20,7 @@ export function loadQuestions(): Question[] {
  * 날짜 문자열을 해시해 questions 배열에서 안정적으로 최대 3문항을 뽑는다.
  * 같은 날짜에는 항상 같은 3문항이 나온다(하루치 데일리 퀴즈 고정).
  */
-export function getDailyQuestions(questions: Question[], date: string = new Date().toISOString().slice(0, 10)): Question[] {
+export function getDailyQuestions(questions: Question[], date: string = getTodayDateString()): Question[] {
   if (!Array.isArray(questions) || questions.length === 0) return [];
 
   const hash = date.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);

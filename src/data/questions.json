@@ -7,7 +7,9 @@
       { "id": "q1-b", "text": "5천만 원", "isCorrect": true },
       { "id": "q1-c", "text": "1억 원", "isCorrect": false }
     ],
-    "explanation": "예금보험공사는 은행별로 1인당 원금과 이자를 합쳐 5천만 원까지 보호한다."
+    "explanation": "예금보험공사는 은행별로 1인당 원금과 이자를 합쳐 5천만 원까지 보호한다.",
+    "category": "저축",
+    "difficulty": "easy"
   },
   {
     "id": "q2",
@@ -17,7 +19,9 @@
       { "id": "q2-b", "text": "여러 곳에서 대출 신청", "isCorrect": false },
       { "id": "q2-c", "text": "체크카드 사용 늘리기", "isCorrect": true }
     ],
-    "explanation": "체크카드는 신용거래가 아니라서 점수에 영향을 주지 않는다."
+    "explanation": "체크카드는 신용거래가 아니라서 점수에 영향을 주지 않는다.",
+    "category": "신용관리",
+    "difficulty": "easy"
   },
   {
     "id": "q3",
@@ -27,7 +31,9 @@
       { "id": "q3-b", "text": "50의 법칙", "isCorrect": false },
       { "id": "q3-c", "text": "100의 법칙", "isCorrect": false }
     ],
-    "explanation": "72를 수익률로 나누면 원금이 두 배 되는 기간이 나온다. 72÷6=12년."
+    "explanation": "72를 수익률로 나누면 원금이 두 배 되는 기간이 나온다. 72÷6=12년.",
+    "category": "투자",
+    "difficulty": "medium"
   },
   {
     "id": "q4",
@@ -37,7 +43,9 @@
       { "id": "q4-b", "text": "코스닥 상장사 시가총액", "isCorrect": false },
       { "id": "q4-c", "text": "유가증권시장 상장사 주가 지수", "isCorrect": true }
     ],
-    "explanation": "코스피는 유가증권시장에 상장된 종목들의 주가를 종합한 지수다."
+    "explanation": "코스피는 유가증권시장에 상장된 종목들의 주가를 종합한 지수다.",
+    "category": "투자",
+    "difficulty": "easy"
   },
   {
     "id": "q5",
@@ -47,7 +55,9 @@
       { "id": "q5-b", "text": "세액공제", "isCorrect": true },
       { "id": "q5-c", "text": "과세표준", "isCorrect": false }
     ],
-    "explanation": "소득공제는 과세 대상 소득을 줄이고, 세액공제는 계산된 세금 자체를 줄인다."
+    "explanation": "소득공제는 과세 대상 소득을 줄이고, 세액공제는 계산된 세금 자체를 줄인다.",
+    "category": "세금",
+    "difficulty": "medium"
   },
   {
     "id": "q6",
@@ -57,7 +67,9 @@
       { "id": "q6-b", "text": "따라서 내린다", "isCorrect": false },
       { "id": "q6-c", "text": "영향이 없다", "isCorrect": false }
     ],
-    "explanation": "한국은행이 기준금리를 올리면 은행들도 예·적금 금리를 함께 올리는 경우가 많다."
+    "explanation": "한국은행이 기준금리를 올리면 은행들도 예·적금 금리를 함께 올리는 경우가 많다.",
+    "category": "저축",
+    "difficulty": "medium"
   },
   {
     "id": "q7",
@@ -67,7 +79,9 @@
       { "id": "q7-b", "text": "은행 예금처럼 원금이 보장된다", "isCorrect": false },
       { "id": "q7-c", "text": "가입 후 5년간 해지할 수 없다", "isCorrect": false }
     ],
-    "explanation": "ETF는 거래소에 상장돼 있어 주식처럼 장중에 사고팔 수 있다."
+    "explanation": "ETF는 거래소에 상장돼 있어 주식처럼 장중에 사고팔 수 있다.",
+    "category": "투자",
+    "difficulty": "medium"
   },
   {
     "id": "q8",
@@ -77,6 +91,8 @@
       { "id": "q8-b", "text": "약 32%", "isCorrect": false },
       { "id": "q8-c", "text": "약 65%", "isCorrect": false }
     ],
-    "explanation": "150 ÷ 320 ≈ 0.47, 저축률은 약 47%다."
+    "explanation": "150 ÷ 320 ≈ 0.47, 저축률은 약 47%다.",
+    "category": "가계부",
+    "difficulty": "easy"
   }
 ]
