@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import { beforeEach, afterEach, vi } from "vitest";
 
 // jsdom's localStorage/sessionStorage persist between tests by default — clear to prevent pollution.

@@ -25,7 +25,10 @@ vi.mock("@toss/tds-mobile", () => {
   return new Proxy(
     {},
     {
-      get: (_target, prop) => stub(String(prop)),
+      // "then"을 함수로 돌려주면 이 Proxy가 thenable로 오인되어 await import(...)가 영원히 멈춘다 — 반드시 가드.
+      get: (_target, prop) => (prop === "then" ? undefined : stub(String(prop))),
+      // vitest가 mock 모듈을 감쌀 때 "prop in target"으로 export 존재 여부를 검사한다 — 항상 true를 돌려줘야 임의 컴포넌트명이 통과한다.
+      has: () => true,
     }
   );
 });
@@ -34,7 +37,8 @@ vi.mock("@toss/tds-colors", () => {
   return new Proxy(
     {},
     {
-      get: (_target, prop) => `mock-color-${String(prop)}`,
+      get: (_target, prop) => (prop === "then" ? undefined : `mock-color-${String(prop)}`),
+      has: () => true,
     }
   );
 });
@@ -48,7 +52,9 @@ vi.mock("lucide-react", () => {
   return new Proxy(
     {},
     {
-      get: (_target, prop) => stub(String(prop)),
+      // 위와 동일한 이유로 "then"은 가드해야 await import(...)가 멈추지 않는다.
+      get: (_target, prop) => (prop === "then" ? undefined : stub(String(prop))),
+      has: () => true,
     }
   );
 });
